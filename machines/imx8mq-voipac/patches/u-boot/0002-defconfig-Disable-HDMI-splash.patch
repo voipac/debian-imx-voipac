@@ -1,0 +1,25 @@
+From ef14dc436ed41589b5fee6a77929141433133f6c Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Fri, 10 Jun 2022 17:08:02 +0200
+Subject: [PATCH] defconfig: Disable HDMI splash
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ configs/imx8mq_evk_voipac_defconfig | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/configs/imx8mq_evk_voipac_defconfig b/configs/imx8mq_evk_voipac_defconfig
+index 7f73566..88f5dec 100644
+--- a/configs/imx8mq_evk_voipac_defconfig
++++ b/configs/imx8mq_evk_voipac_defconfig
+@@ -111,6 +111,6 @@ CONFIG_USB_GADGET_PRODUCT_NUM=0xa4a5
+ CONFIG_SDP_LOADADDR=0x40400000
+ CONFIG_DM_VIDEO=y
+ CONFIG_SYS_WHITE_ON_BLACK=y
++CONFIG_DISPLAY=y
+ CONFIG_VIDEO_IMX8M_DCSS=y
+-CONFIG_VIDEO_IMX8M_HDMI=y
+ CONFIG_OF_LIBFDT_OVERLAY=y
+-- 
+2.7.4
+
