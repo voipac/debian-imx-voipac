@@ -1,0 +1,159 @@
+From 9a13794890e132b400a8e7169dd595edd4b5eac1 Mon Sep 17 00:00:00 2001
+From: Dizni Prajosh <dizni.kp@gmail.com>
+Date: Wed, 6 May 2020 12:28:25 +0200
+Subject: [PATCH] Input: touchscreen: SiS95xx driver added diffdata
+
+The diffdata values can be used used for fine tuning and
+optimizing the touch performance. Added function to read
+diffdata.
+
+Signed-off-by: Dizni Premdas <Dizni.Premdas@avnet.eu>
+---
+ drivers/input/touchscreen/sis_i2c_95xx_ts.c | 111 ++++++++++++++++++++++++++++
+ 1 file changed, 111 insertions(+)
+
+diff --git a/drivers/input/touchscreen/sis_i2c_95xx_ts.c b/drivers/input/touchscreen/sis_i2c_95xx_ts.c
+index e3d22ce..d5ecc97 100755
+--- a/drivers/input/touchscreen/sis_i2c_95xx_ts.c
++++ b/drivers/input/touchscreen/sis_i2c_95xx_ts.c
+@@ -97,6 +97,7 @@
+ #define VOLT_DATA_ADDR          0x5A000000
+ #define RAW_DATA_ADDR           0x52000000
+ #define CYCLE_DATA_ADDR         0x54000000
++#define DIFF_DATA_ADDR          0x53000000
+ 
+ #define FWMODE_ADDR             0x58000000
+ 
+@@ -1184,12 +1185,121 @@ static ssize_t fw_mode_show(struct device *dev, struct device_attribute *attr,
+ 	return len;
+ }
+ 
++static ssize_t diff_data_show(struct device *dev,
++		struct device_attribute *attr, char *buf)
++{
++	uint8_t *volt_data;
++	uint8_t temp_buf[4];
++	uint8_t ntx;
++	uint8_t nrx;
++	uint8_t allign_rx;
++	uint8_t is_16_bit;
++	uint32_t total_len;
++	uint32_t i;
++	uint32_t index = 0;
++	int data_len;
++	int ret;
++
++	struct sis_data *data = dev_get_drvdata(dev);
++
++	disable_irq(data->irq);
++
++	ret = send_cmd85_change_mode(data, PWR_CMD_ACTIVE);
++	if (ret < 0)
++		goto err_comm_fail;
++
++	msleep(100);
++
++	ret = send_cmd85_change_mode(data, ENABLE_DIAGNOSIS_MODE);
++	if (ret < 0)
++		goto err_comm_fail;
++
++	/* read tx and rx */
++	ret = send_cmd86_read(data, VOLT_DATA_ADDR, temp_buf, sizeof(temp_buf));
++	if (ret < 0)
++		goto err_comm_fail;
++
++	ntx = temp_buf[1];
++	nrx = temp_buf[3];
++
++	is_16_bit = data->fw_info[0x1D];
++
++	if (is_16_bit) {
++		if (nrx % 2)
++			allign_rx  = nrx + (2 - (nrx % 2));
++		else
++			allign_rx = nrx;
++
++		total_len = ntx * allign_rx * 2;
++		data_len   = ntx * nrx * 2;
++	} else {
++		if (nrx % 4)
++			allign_rx  = nrx + (4 - (nrx % 4));
++		else
++			allign_rx = nrx;
++
++		total_len = ntx * allign_rx;
++		data_len = ntx * nrx;
++	}
++
++	/* check if enough memory */
++	if (total_len > VOLT_DATA_SIZE) {
++		pr_info("Not enough memory in sysfs file\n");
++		ret = -ENOMEM;
++		goto err_comm_fail;
++	}
++
++	/* copy x, y, bit8/16 info to file */
++	buf[0] = ntx;
++	buf[1] = nrx;
++	buf[2] = is_16_bit;
++	index = 3;
++	data_len += index;
++
++	/* read diff data */
++	volt_data = kmalloc(total_len + 1, GFP_KERNEL);
++	if (!volt_data) {
++		ret = -ENOMEM;
++		goto err_comm_fail;
++	}
++
++	ret = send_cmd86_read_debug(data, DIFF_DATA_ADDR, volt_data, total_len);
++	if (ret < 0)
++		goto err_comm_fail;
++
++	/* copy data to file, remove the holes */
++	if (is_16_bit) {
++		allign_rx *= 2;
++		nrx *= 2;
++	}
++	for (i = 0; i < total_len; i += allign_rx, index += nrx)
++		memcpy(&buf[index], &volt_data[i], nrx);
++
++	kfree(volt_data);
++
++	ret = send_cmd85_change_mode(data, PWR_CMD_FWCTRL);
++	if (ret < 0)
++		goto err_comm_fail;
++
++	ret = send_cmd85_change_mode(data, DISABLE_DIAGNOSIS_MODE);
++	if (ret < 0)
++		goto err_comm_fail;
++
++	/* return data length on SUCCESS */
++	ret = data_len;
++
++err_comm_fail:
++	enable_irq(data->irq);
++	return ret;
++}
++
+ static DEVICE_ATTR(ver, S_IRUSR, ver_show, NULL);
+ static DEVICE_ATTR(fw_info, S_IRUSR, fw_info_show, NULL);
+ static DEVICE_ATTR(update_fw, S_IWUSR, NULL, sis_update_fw);
+ static DEVICE_ATTR(reset_sw, S_IWUSR, NULL, sis_reset);
+ static DEVICE_ATTR(sensor_data, S_IRUSR, sensor_data_show, NULL);
+ static DEVICE_ATTR(fw_mode, S_IRUSR, fw_mode_show, NULL);
++static DEVICE_ATTR(diff_data, S_IRUSR, diff_data_show, NULL);
+ 
+ static struct attribute *sis_attrs[] = {
+ 	&dev_attr_ver.attr,
+@@ -1198,6 +1308,7 @@ static struct attribute *sis_attrs[] = {
+ 	&dev_attr_reset_sw.attr,
+ 	&dev_attr_sensor_data.attr,
+ 	&dev_attr_fw_mode.attr,
++	&dev_attr_diff_data.attr,
+ 	NULL,   /* need to NULL terminate the list of attributes */
+ };
+ 
+-- 
+2.7.4
+

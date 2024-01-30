@@ -1,4 +1,8 @@
 #!/bin/bash
+#
+# Copyrigh: Voipac s.r.o.
+# Author: Marek Belisko <marek.belisko@voipac.com>
+#
 
 readonly DEB_RELEASE="bullseye"
 PARAM_CMD="all"
@@ -10,7 +14,7 @@ function usage()
     echo "Make Debian ${DEB_RELEASE} image and create a bootabled SD card"
     echo
     echo "Usage:"
-    echo " MACHINE=<imx8mq-voipac ./${SCRIPT_NAME} options"
+    echo " MACHINE=imx8mq-voipac ./${SCRIPT_NAME} options"
     echo
     echo "Options:"
     echo "  -h|--help   -- print this help"
@@ -19,20 +23,8 @@ function usage()
     echo "       all         -- build or rebuild kernel/bootloader/rootfs"
     echo "       bootloader  -- build or rebuild U-Boot"
     echo "       kernel      -- build or rebuild the Linux kernel"
-    echo "       kernelheaders -- build or rebuild Linux kernel headers"
-    echo "       modules     -- build or rebuild the Linux kernel modules & headers and install them in the rootfs dir"
     echo "       rootfs      -- build or rebuild the Debian root filesystem and create rootfs.tar.gz"
     echo "                       (including: make & install Debian packages, firmware and kernel modules & headers)"
-    echo "       rtar        -- generate or regenerate rootfs.tar.gz image from the rootfs folder"
-    echo "       clean       -- clean all build artifacts (without deleting sources code or resulted images)"
-    echo "       sdcard      -- create a bootable SD card"
-    echo "  -o|--output -- custom select output directory (default: \"${PARAM_OUTPUT_DIR}\")"
-    echo "  -d|--dev    -- specify SD card device (exmple: -d /dev/sde)"
-    echo "Examples of use:"
-    echo "  deploy and build:                 sudo ./${SCRIPT_NAME} --cmd all"
-    echo "  make the Linux kernel only:       sudo ./${SCRIPT_NAME} --cmd kernel"
-    echo "  make rootfs only:                 sudo ./${SCRIPT_NAME} --cmd rootfs"
-    echo "  create SD card:                   sudo ./${SCRIPT_NAME} --cmd sdcard --dev /dev/sdX"
     echo
 }
 
@@ -52,16 +44,6 @@ while true; do
                 -c|--cmd ) # script command
                         shift
                         PARAM_CMD="$1";
-                        ;;
-                -o|--output ) # select output dir
-                        shift
-                        PARAM_OUTPUT_DIR="$1";
-                        ;;
-                -d|--dev ) # SD card block device
-                        shift
-                        [ -e "${1}" ] && {
-                                PARAM_BLOCK_DEVICE=${1};
-                        };
                         ;;
                 -h|--help ) # get help
                         usage
@@ -87,6 +69,7 @@ fi
 
 # prepare sources if do not exists yet
 source helpers/commands_prepare.sh
+source helpers/make_debian_image.sh
 cmd_make_prepare
 
 case $PARAM_CMD in
@@ -99,29 +82,16 @@ case $PARAM_CMD in
         kernel )
                 cmd_make_kernel
                 ;;
-        modules )
-                cmd_make_kmodules
-                ;;
-        kernelheaders )
-                cmd_make_kernel_header_deb
-                ;;
-        sdcard )
-                cmd_make_sdcard
-                ;;
-        rtar )
-                cmd_make_rfs_tar
-                ;;
-
         all )
                 cmd_make_uboot  &&
                 cmd_make_kernel &&
-                cmd_make_kmodules &&
                 cmd_make_rootfs
+                cmd_make_sdimg
                 ;;
         clean )
                 cmd_make_clean
                 ;;
         * )
-                pr_error "Invalid input command: \"${PARAM_CMD}\"";
+                echo "Invalid input command: \"${PARAM_CMD}\"";
                 ;;
 esac

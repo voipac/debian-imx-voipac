@@ -1,0 +1,91 @@
+From 0945c41369c236f582dc6cd4bec307f5daafe0f4 Mon Sep 17 00:00:00 2001
+From: Dizni Prajosh <dizni.kp@gmail.com>
+Date: Thu, 13 Dec 2018 10:57:08 +0100
+Subject: [PATCH] Input: touchscreen: SiS95xx driver Bug fix touch
+
+If actual touch data is less than 5, the rest of touch data would be
+set zero in each touch packet for keeping the fixed length. Fixed the
+bug not to read this default data.
+
+Signed-off-by: Dizni Premdas <Dizni.Premdas@msc-technologies.eu>
+---
+ drivers/input/touchscreen/sis_i2c_95xx_ts.c | 20 +++++++++++++-------
+ 1 file changed, 13 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/input/touchscreen/sis_i2c_95xx_ts.c b/drivers/input/touchscreen/sis_i2c_95xx_ts.c
+index f79857f..2dc2da6 100644
+--- a/drivers/input/touchscreen/sis_i2c_95xx_ts.c
++++ b/drivers/input/touchscreen/sis_i2c_95xx_ts.c
+@@ -25,7 +25,7 @@
+ 
+ #define MAJOR_NUM   '1'
+ #define MINOR_NUM   '0'
+-#define EXTRA_NUM   '0'
++#define EXTRA_NUM   '2'
+ 
+ 
+ /* Touchscreen absolute values */
+@@ -80,7 +80,6 @@
+ #define PWR_CMD_ACTIVE          0x0951
+ #define PWR_CMD_SLEEP           0x0952
+ #define CHG_OLD_MODE            0x0123
+-#define CHG_NEW_MODE            0x0124
+ 
+ #define GOOD_CODE               0xBEEF
+ #define BAD_CODE                0xDEAD
+@@ -510,7 +509,7 @@ static irqreturn_t sis_int_irq_handler(int irq, void *devid)
+ 	uint8_t id;
+ 	uint16_t x;
+ 	uint16_t y;
+-
++	uint8_t n_touch = 0;
+ 
+ 	do {
+ 		ret = __sis_read(data->client, sizeof(tmpbuf), tmpbuf);
+@@ -525,7 +524,6 @@ static irqreturn_t sis_int_irq_handler(int irq, void *devid)
+ 		if (count == 3)
+ 			goto empty_packet;
+ 
+-
+ 		report_id = tmpbuf[REPORT_ID_BYTE];
+ 
+ 		if (!IS_TOUCH(report_id))
+@@ -547,8 +545,17 @@ static irqreturn_t sis_int_irq_handler(int irq, void *devid)
+ 		count -= SIZE_OF_BYTE_COUNT;
+ 		count -= SIZE_OF_REPORT_ID;
+ 
++		if (!n_touch)
++			n_touch = num_touches;
++
+ 		i = SIZE_OF_BYTE_COUNT + SIZE_OF_REPORT_ID;
+-		for ( ; i < count; i += SIZE_OF_TOUCH_DATA) {
++		/* NOTE: If actual touch data is less than 5, the rest of touch
++		 * data would be set zero in each touch packet for keeping
++		 * the fixed length.
++		 */
++		for ( ; (i < count) && (n_touch > 0); i += SIZE_OF_TOUCH_DATA) {
++			n_touch--;
++
+ 			id = tmpbuf[i + CONTACT_ID];
+ 			input_mt_slot(input_dev, id);
+ 
+@@ -557,7 +564,6 @@ static irqreturn_t sis_int_irq_handler(int irq, void *devid)
+ 				x = tmpbuf[i + X_LSB] | (tmpbuf[i + X_MSB] << 8);
+ 				y = tmpbuf[i + Y_LSB] | (tmpbuf[i + Y_MSB] << 8);
+ 
+-
+ 				/* Touch active */
+ 				input_mt_report_slot_state(input_dev, MT_TOOL_FINGER, 1);
+ 				input_report_abs(input_dev, ABS_MT_POSITION_X, x);
+@@ -858,7 +864,7 @@ static ssize_t sensor_data_show(struct device *dev, struct device_attribute *att
+ 	if (ret < 0)
+ 		goto err_comm_fail;
+ 
+-	ret = send_cmd85_change_mode(data, CHG_NEW_MODE);
++	ret = send_cmd82_reset_soft(data);
+ 	if (ret < 0)
+ 		goto err_comm_fail;
+ 
+-- 
+2.7.4
+

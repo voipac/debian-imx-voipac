@@ -1,0 +1,221 @@
+From 82e3397b5503377ccae12553f3030bf9b965b2de Mon Sep 17 00:00:00 2001
+From: Pierluigi Passaro <pierluigi.p@variscite.com>
+Date: Tue, 15 Jun 2021 16:08:15 +0200
+Subject: [PATCH] ASoC: wm8904: extend device tree support
+
+The platform_data structure is not populated when using device trees.
+This patch adds optional dts properties to allow populating it:
+- gpio-cfg
+- mic-cfg
+- num-drc-cfgs
+- drc-cfg-regs
+- drc-cfg-names
+- num-retune-mobile-cfgs
+- retune-mobile-cfg-regs
+- retune-mobile-cfg-names
+- retune-mobile-cfg-rates
+
+Signed-off-by: Pierluigi Passaro <pierluigi.p@variscite.com>
+---
+ Documentation/devicetree/bindings/sound/wm8904.txt | 53 ++++++++++++
+ sound/soc/codecs/wm8904.c                          | 96 +++++++++++++++++++++-
+ 2 files changed, 147 insertions(+), 2 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/sound/wm8904.txt b/Documentation/devicetree/bindings/sound/wm8904.txt
+index 66bf261..e3bfd3e 100644
+--- a/Documentation/devicetree/bindings/sound/wm8904.txt
++++ b/Documentation/devicetree/bindings/sound/wm8904.txt
+@@ -9,6 +9,40 @@ Required properties:
+   - clocks: reference to
+     <Documentation/devicetree/bindings/clock/clock-bindings.txt>
+ 
++Optional properties:
++
++  - gpio-cfg: Default registers value for R121/122/123/124 (GPIO Control).
++    The list must be 4 entries long. If absent, the registers are set to 0.
++    If any entry has the value 0xffff, the related register won't be set.
++
++  - mic-cfg: Default registers value for R6/R7 (Mic Bias Control).
++    The list must be 2 entries long. If absent, the registers are set to 0.
++
++  - num-drc-cfgs: Number of available DRC modes from drc-cfg-regs property
++
++  - drc-cfg-regs: Default registers value for R40/41/42/43 (DRC)
++    The list must be (4 x num-drc-cfgs) entries long.
++    If absent or incomplete, DRC is disabled.
++
++  - drc-cfg-names: List of strings for the available DRC modes.
++    The list must be (num-drc-cfgs) entries long.
++    If absent or incomplete, DRC is disabled.
++
++  - num-retune-mobile-cfgs: Number of retune modes available from
++    retune-mobile-cfg-regs property
++
++  - retune-mobile-cfg-regs: Default registers value for R134/.../157 (EQ)
++    The list must be (24 x num-retune-mobile-cfgs) entries long.
++    If absent or incomplete, retune is disabled.
++
++  - retune-mobile-cfg-names: List of strings for the available retune modes.
++    The list must be (num-retune-mobile-cfgs) entries long.
++    If absent or incomplete, retune is disabled.
++
++  - retune-mobile-cfg-rates: List of rates for the available retune modes.
++    The list must be (num-retune-mobile-cfgs) entries long.
++    If absent or incomplete, retune is disabled.
++
+ Pins on the device (for linking into audio routes):
+ 
+   * IN1L
+@@ -30,4 +64,23 @@ codec: wm8904@1a {
+ 	reg = <0x1a>;
+ 	clocks = <&pck0>;
+ 	clock-names = "mclk";
++	num-drc-cfgs = <5>;
++	drc-cfg-names = "default", "peaklimiter", "tradition", "soft", "music";
++	drc-cfg-regs =
++			/* coded default: KNEE_IP = KNEE_OP = 0, HI_COMP = LO_COMP = 1  */
++			<0x01af 0x3248 0x0000 0x0000>,
++			/* coded default: KNEE_IP = -24, KNEE_OP = -6, HI_COMP = 1/4, LO_COMP = 1 */
++			<0x04af 0x324b 0x0010 0x0408>,
++			/* coded default: KNEE_IP = -42, KNEE_OP = -3, HI_COMP = 0, LO_COMP = 1 */
++			<0x04af 0x324b 0x0028 0x0704>,
++			/* coded default: KNEE_IP = -45, KNEE_OP = -9, HI_COMP = 1/8, LO_COMP = 1 */
++			<0x04af 0x324b 0x0018 0x078c>,
++			/* coded default: KNEE_IP = -30, KNEE_OP = -10.5, HI_COMP = 1/4, LO_COMP = 1 */
++			<0x04af 0x324b 0x0010 0x050e>;
++	gpio-cfg = <
++		0x0018 /* GPIO1 => DMIC_CLK */
++		0xffff /* GPIO2 => don't touch */
++		0xffff /* GPIO3 => don't touch */
++		0xffff /* GPIO4 => don't touch */
++	>;
+ };
+diff --git a/sound/soc/codecs/wm8904.c b/sound/soc/codecs/wm8904.c
+index 9e8c564..94b1cb1a 100644
+--- a/sound/soc/codecs/wm8904.c
++++ b/sound/soc/codecs/wm8904.c
+@@ -2139,6 +2139,93 @@ static const struct of_device_id wm8904_of_match[] = {
+ MODULE_DEVICE_TABLE(of, wm8904_of_match);
+ #endif
+ 
++static int wm8904_set_pdata_from_of(struct i2c_client *i2c,
++				     struct wm8904_priv *wm8904)
++{
++	const struct device_node *np = i2c->dev.of_node;
++	struct wm8904_pdata *pdata;
++	bool drc_cfgs_is_valid = true;
++	bool retune_mobile_cfgs_is_valid = true;
++	int i, j, offset;
++	u32 val32;
++
++	pdata = devm_kzalloc(&i2c->dev, sizeof(*pdata), GFP_KERNEL);
++	if (!pdata)
++		return -ENOMEM;
++
++	if (of_property_read_u32_array(np, "gpio-cfg", pdata->gpio_cfg,
++					ARRAY_SIZE(pdata->gpio_cfg))) {
++		dev_dbg(&i2c->dev, "No 'gpio-cfg' property found\n");
++	}
++
++	if (of_property_read_u32_array(np, "mic-cfg", pdata->mic_cfg,
++					ARRAY_SIZE(pdata->mic_cfg))) {
++		dev_dbg(&i2c->dev, "No 'mic-cfg' property found\n");
++	}
++
++	if (of_property_read_s32(np, "num-drc-cfgs", &pdata->num_drc_cfgs)) {
++		dev_dbg(&i2c->dev, "No 'num-drc-cfgs' property found\n");
++	} else if (pdata->num_drc_cfgs < 0) {
++		dev_err(&i2c->dev, "Negative 'num-drc-cfgs' property found\n");
++		pdata->num_drc_cfgs = 0;
++	} else if (pdata->num_drc_cfgs > 0) {
++		pdata->drc_cfgs = devm_kzalloc(&i2c->dev, pdata->num_drc_cfgs * sizeof(struct wm8904_drc_cfg), GFP_KERNEL);
++		for (i = 0; i < pdata->num_drc_cfgs && drc_cfgs_is_valid; i++) {
++			offset = i * WM8904_DRC_REGS;
++			for (j = 0; j < WM8904_DRC_REGS && drc_cfgs_is_valid; j++) {
++				if (of_property_read_u32_index(np, "drc-cfg-regs", offset + j, &val32)) {
++					dev_err(&i2c->dev, "Invalid 'drc-cfg-regs[%i,%i]' property found\n", i,j);
++					drc_cfgs_is_valid = false;
++				} else {
++					pdata->drc_cfgs[i].regs[j] = val32;
++				}
++			}
++			if (of_property_read_string_index(np, "drc-cfg-names", i, &pdata->drc_cfgs[i].name)) {
++				dev_err(&i2c->dev, "Invalid 'drc-cfg-names[%i]' property found\n", i);
++				drc_cfgs_is_valid = false;
++			}
++		}
++	}
++	if (!drc_cfgs_is_valid) {
++		pdata->num_drc_cfgs = 0;
++	}
++
++	if (of_property_read_s32(np, "num-retune-mobile-cfgs", &pdata->num_retune_mobile_cfgs)) {
++		dev_dbg(&i2c->dev, "No 'num-retune-mobile-cfgs' property found\n");
++	} else if (pdata->num_retune_mobile_cfgs < 0) {
++		dev_err(&i2c->dev, "Negative 'num-retune-mobile-cfgs' property found\n");
++		pdata->num_retune_mobile_cfgs = 0;
++	} else if (pdata->num_retune_mobile_cfgs > 0) {
++		pdata->retune_mobile_cfgs = devm_kzalloc(&i2c->dev, pdata->num_retune_mobile_cfgs * sizeof(struct wm8904_retune_mobile_cfg), GFP_KERNEL);
++		for (i = 0; i < pdata->num_retune_mobile_cfgs && retune_mobile_cfgs_is_valid; i++) {
++			offset = i * WM8904_EQ_REGS;
++			for (j = 0; j < WM8904_EQ_REGS && retune_mobile_cfgs_is_valid; j++) {
++				if (of_property_read_u32_index(np, "retune-mobile-cfg-regs", offset + j, &val32)) {
++					dev_err(&i2c->dev, "Invalid 'retune-mobile-cfg-regs[%i,%i]' property found\n", i,j);
++					retune_mobile_cfgs_is_valid = false;
++				} else {
++					pdata->retune_mobile_cfgs[i].regs[j] = val32;
++				}
++			}
++			if (of_property_read_u32_index(np, "retune-mobile-cfg-rates", i, &pdata->retune_mobile_cfgs[i].rate)) {
++				dev_err(&i2c->dev, "Invalid 'retune-mobile-cfg-rates[%i]' property found\n", i);
++				retune_mobile_cfgs_is_valid = false;
++			}
++			if (of_property_read_string_index(np, "retune-mobile-cfg-names", i, &pdata->retune_mobile_cfgs[i].name)) {
++				dev_err(&i2c->dev, "Invalid 'retune-mobile-cfg-names[%i]' property found\n", i);
++				retune_mobile_cfgs_is_valid = false;
++			}
++		}
++	}
++	if (!retune_mobile_cfgs_is_valid) {
++		pdata->num_retune_mobile_cfgs = 0;
++	}
++
++	wm8904->pdata = pdata;
++
++	return 0;
++}
++
+ static int wm8904_i2c_probe(struct i2c_client *i2c,
+ 			    const struct i2c_device_id *id)
+ {
+@@ -2173,12 +2260,17 @@ static int wm8904_i2c_probe(struct i2c_client *i2c,
+ 		if (match == NULL)
+ 			return -EINVAL;
+ 		wm8904->devtype = (enum wm8904_type)match->data;
++		ret = wm8904_set_pdata_from_of(i2c, wm8904);
++		if (ret != 0) {
++			dev_err(&i2c->dev, "Failed to set platform data from of: %d\n", ret);
++			return ret;
++		}
+ 	} else {
+ 		wm8904->devtype = id->driver_data;
++		wm8904->pdata = i2c->dev.platform_data;
+ 	}
+ 
+ 	i2c_set_clientdata(i2c, wm8904);
+-	wm8904->pdata = i2c->dev.platform_data;
+ 
+ 	for (i = 0; i < ARRAY_SIZE(wm8904->supplies); i++)
+ 		wm8904->supplies[i].supply = wm8904_supply_names[i];
+@@ -2249,7 +2341,7 @@ static int wm8904_i2c_probe(struct i2c_client *i2c,
+ 	/* Apply configuration from the platform data. */
+ 	if (wm8904->pdata) {
+ 		for (i = 0; i < WM8904_GPIO_REGS; i++) {
+-			if (!wm8904->pdata->gpio_cfg[i])
++			if (wm8904->pdata->gpio_cfg[i] == 0xffff)
+ 				continue;
+ 
+ 			regmap_update_bits(wm8904->regmap,
+-- 
+2.7.4
+

@@ -1,0 +1,93 @@
+From 677a31b44af2a493b1b6460ea9b122195d97acb4 Mon Sep 17 00:00:00 2001
+From: Dizni Prajosh <dizni.kp@gmail.com>
+Date: Wed, 29 Apr 2020 17:59:50 +0200
+Subject: [PATCH] Input: touchscreen: SiS95xx driver added fwmode
+
+The fwmode can be used to understand the state of touch firmware
+such as frequency hopping, palm state etc. Added function to read
+fwmode.
+
+Signed-off-by: Dizni Premdas <Dizni.Premdas@avnet.eu>
+---
+ drivers/input/touchscreen/sis_i2c_95xx_ts.c | 39 ++++++++++++++++++++++++++++-
+ 1 file changed, 38 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/input/touchscreen/sis_i2c_95xx_ts.c b/drivers/input/touchscreen/sis_i2c_95xx_ts.c
+index 449df143..e3d22ce 100755
+--- a/drivers/input/touchscreen/sis_i2c_95xx_ts.c
++++ b/drivers/input/touchscreen/sis_i2c_95xx_ts.c
+@@ -25,7 +25,7 @@
+ 
+ #define MAJOR_NUM   '1'
+ #define MINOR_NUM   '0'
+-#define EXTRA_NUM   '4'
++#define EXTRA_NUM   '5'
+ 
+ 
+ /* Touchscreen absolute values */
+@@ -98,6 +98,7 @@
+ #define RAW_DATA_ADDR           0x52000000
+ #define CYCLE_DATA_ADDR         0x54000000
+ 
++#define FWMODE_ADDR             0x58000000
+ 
+ /* Each SiS controller connected has these data */
+ struct sis_data {
+@@ -1149,11 +1150,46 @@ static ssize_t sis_reset(struct device *dev, struct device_attribute *attr,
+ 	return ret;
+ }
+ 
++static ssize_t fw_mode_show(struct device *dev, struct device_attribute *attr,
++		char *buf)
++{
++	uint8_t fw_mode[32];
++	uint8_t len = sizeof(fw_mode);
++	int ret = 0;
++
++	struct sis_data *data = dev_get_drvdata(dev);
++
++	ret = send_cmd85_change_mode(data, PWR_CMD_ACTIVE);
++	if (ret < 0)
++		return ret;
++
++	ret = send_cmd85_change_mode(data, ENABLE_DIAGNOSIS_MODE);
++	if (ret < 0)
++		return ret;
++
++	ret = send_cmd86_read(data, FWMODE_ADDR, fw_mode, len);
++	if (ret < 0)
++		return ret;
++
++	memcpy(buf, fw_mode, len);
++
++	ret = send_cmd85_change_mode(data, PWR_CMD_FWCTRL);
++	if (ret < 0)
++		return ret;
++
++	ret = send_cmd85_change_mode(data, DISABLE_DIAGNOSIS_MODE);
++	if (ret < 0)
++		return ret;
++
++	return len;
++}
++
+ static DEVICE_ATTR(ver, S_IRUSR, ver_show, NULL);
+ static DEVICE_ATTR(fw_info, S_IRUSR, fw_info_show, NULL);
+ static DEVICE_ATTR(update_fw, S_IWUSR, NULL, sis_update_fw);
+ static DEVICE_ATTR(reset_sw, S_IWUSR, NULL, sis_reset);
+ static DEVICE_ATTR(sensor_data, S_IRUSR, sensor_data_show, NULL);
++static DEVICE_ATTR(fw_mode, S_IRUSR, fw_mode_show, NULL);
+ 
+ static struct attribute *sis_attrs[] = {
+ 	&dev_attr_ver.attr,
+@@ -1161,6 +1197,7 @@ static struct attribute *sis_attrs[] = {
+ 	&dev_attr_update_fw.attr,
+ 	&dev_attr_reset_sw.attr,
+ 	&dev_attr_sensor_data.attr,
++	&dev_attr_fw_mode.attr,
+ 	NULL,   /* need to NULL terminate the list of attributes */
+ };
+ 
+-- 
+2.7.4
+

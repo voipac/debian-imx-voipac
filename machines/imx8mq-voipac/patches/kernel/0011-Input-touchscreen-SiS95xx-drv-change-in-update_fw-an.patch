@@ -1,0 +1,233 @@
+From 388526b5fa66f7b29ab8ee0e44f3a95a312ec562 Mon Sep 17 00:00:00 2001
+From: Dizni Prajosh <dizni.kp@gmail.com>
+Date: Wed, 23 Oct 2019 11:07:17 +0200
+Subject: [PATCH] Input: touchscreen: SiS95xx drv change in update_fw and
+ test-algo
+
+Splitted the data to 0x1000 bytes during FW update. Changes added to support new algo for senor testing tool.
+
+Signed-off-by: Dizni Premdas <Dizni.Premdas@msc-technologies.eu>
+---
+ drivers/input/touchscreen/sis_i2c_95xx_ts.c | 127 +++++++++++++++++++++++-----
+ 1 file changed, 104 insertions(+), 23 deletions(-)
+ mode change 100644 => 100755 drivers/input/touchscreen/sis_i2c_95xx_ts.c
+
+diff --git a/drivers/input/touchscreen/sis_i2c_95xx_ts.c b/drivers/input/touchscreen/sis_i2c_95xx_ts.c
+old mode 100644
+new mode 100755
+index 61e3838..449df143
+--- a/drivers/input/touchscreen/sis_i2c_95xx_ts.c
++++ b/drivers/input/touchscreen/sis_i2c_95xx_ts.c
+@@ -25,7 +25,7 @@
+ 
+ #define MAJOR_NUM   '1'
+ #define MINOR_NUM   '0'
+-#define EXTRA_NUM   '2'
++#define EXTRA_NUM   '4'
+ 
+ 
+ /* Touchscreen absolute values */
+@@ -96,6 +96,8 @@
+ #define TARGET_VOLT_ADDR        0xA0004268  /* FW_INFO_ADDR + 0x0268 */
+ #define VOLT_DATA_ADDR          0x5A000000
+ #define RAW_DATA_ADDR           0x52000000
++#define CYCLE_DATA_ADDR         0x54000000
++
+ 
+ /* Each SiS controller connected has these data */
+ struct sis_data {
+@@ -104,6 +106,7 @@ struct sis_data {
+ 	struct sis_platform_data *pdata;
+ 	char phys[64];
+ 	uint8_t fw_info[128];
++	uint8_t sensor_data_id;
+ 
+ 	unsigned int irq;
+ 
+@@ -730,18 +733,14 @@ static int send_cmd86_read_debug(struct sis_data *data, uint32_t d_addr,
+ 	return 0;
+ }
+ 
+-static ssize_t sensor_data_show(struct device *dev, struct device_attribute *attr,
+-		char *buf)
+-{
+-	struct sis_data *data = dev_get_drvdata(dev);
+ 
++static int read_sensor_data(struct sis_data *data, uint32_t addr, char *pbuf)
++{
+ 	uint8_t *volt_data;
+ 	uint8_t temp_buf[4];
+ 	uint8_t ntx;
+ 	uint8_t nrx;
+ 	uint8_t allign_rx;
+-	uint8_t buf_volt[4];
+-	uint16_t t_volt;
+ 	uint32_t total_len;
+ 	uint32_t i;
+ 	uint32_t index = 0;
+@@ -788,36 +787,43 @@ static ssize_t sensor_data_show(struct device *dev, struct device_attribute *att
+ 		goto err_comm_fail;
+ 	}
+ 
+-	/* read target volt */
+-	ret = send_cmd86_read(data, TARGET_VOLT_ADDR, buf_volt,
+-			sizeof(buf_volt));
+-	if (ret < 0)
+-		goto err_comm_fail;
+-
+ 	/* copy x, y, length and target volt to file */
+-	buf[0] = ntx;
+-	buf[1] = nrx;
+-	t_volt =  ((buf_volt[3]<<0) | (buf_volt[2]<<8)
++	if (addr == RAW_DATA_ADDR) {
++		uint8_t buf_volt[4];
++		uint16_t t_volt;
++
++		/* read target volt */
++		ret = send_cmd86_read(data, TARGET_VOLT_ADDR, buf_volt,
++				sizeof(buf_volt));
++		if (ret < 0)
++			goto err_comm_fail;
++
++
++		/* copy x, y, length and target volt to file */
++		pbuf[0] = ntx;
++		pbuf[1] = nrx;
++		t_volt =  ((buf_volt[3]<<0) | (buf_volt[2]<<8)
+ 				| (buf_volt[1]<<16) | (buf_volt[0]<<24)) >> 4;
+-	buf[2] = (t_volt >> 8) & 0x00ff;
+-	buf[3] = t_volt & 0x00ff;
+-	index = 4;
+-	data_len += index;
++		pbuf[2] = (t_volt >> 8) & 0x00ff;
++		pbuf[3] = t_volt & 0x00ff;
++		index = 4;
++		data_len += index;
++	}
+ 
+-	/* read raw data */
++	/* read raw/cycle data */
+ 	volt_data = kmalloc(total_len + 1, GFP_KERNEL);
+ 	if (!volt_data) {
+ 		ret = -ENOMEM;
+ 		goto err_comm_fail;
+ 	}
+ 
+-	ret = send_cmd86_read_debug(data, RAW_DATA_ADDR, volt_data, total_len);
++	ret = send_cmd86_read_debug(data, addr, volt_data, total_len);
+ 	if (ret < 0)
+ 		goto err_comm_fail;
+ 
+ 	/* copy data to file, remove the holes */
+ 	for (i = 0; i < total_len; i += allign_rx, index += nrx)
+-		memcpy(&buf[index], &volt_data[i], nrx);
++		memcpy(&pbuf[index], &volt_data[i], nrx);
+ 
+ 	kfree(volt_data);
+ 
+@@ -841,6 +847,28 @@ static ssize_t sensor_data_show(struct device *dev, struct device_attribute *att
+ 	return ret;
+ }
+ 
++static ssize_t sensor_data_show(struct device *dev,
++		struct device_attribute *attr, char *buf)
++{
++	uint32_t data_addr[] = { RAW_DATA_ADDR, CYCLE_DATA_ADDR };
++	struct sis_data *data = dev_get_drvdata(dev);
++	uint8_t id = data->sensor_data_id;
++	int len;
++
++	/* read raw/cycle data */
++	len = read_sensor_data(data, data_addr[id], buf);
++	if (len < 0) {
++		pr_info("failed %d\n", len);
++		data->sensor_data_id = 0;
++		return len;
++	}
++
++	id++;
++	data->sensor_data_id = (id > 1) ? 0 : id;
++
++	return len;
++}
++
+ static int sis_update_file_name(struct device *dev, char **file_name,
+ 		const char *buf, size_t count)
+ {
+@@ -928,6 +956,8 @@ static ssize_t sis_update_fw(struct device *dev, struct device_attribute *attr,
+ {
+ 	struct sis_data *data = dev_get_drvdata(dev);
+ 	int ret;
++	int i;
++	uint32_t addr;
+ 
+ 	ret = mutex_lock_interruptible(&data->diag_mutex);
+ 	if (ret)
+@@ -958,6 +988,7 @@ static ssize_t sis_update_fw(struct device *dev, struct device_attribute *attr,
+ 	if (ret < 0)
+ 		goto err_comm_fail;
+ 
++#if 0
+ 
+ 	/* 1. Clear boot-flag */
+ 	ret = cmd_update_flash(data, 0x0001e000, 0x1000);
+@@ -988,6 +1019,56 @@ static ssize_t sis_update_fw(struct device *dev, struct device_attribute *attr,
+ 	ret = cmd_update_flash(data, 0x0001d000, 0x2000);
+ 	if (ret < 0)
+ 		goto err_comm_fail;
++#endif
++
++
++	/* 1. Clear boot-flag */
++	ret = cmd_update_flash(data, 0x0001e000, 0x1000);
++	if (ret < 0)
++		goto err_comm_fail;
++
++	 /* 2. Update Main code 1 */
++	addr = 0x00007000;
++	for (i = 0; i < 22; i++) {
++		ret = cmd_update_flash(data, addr, 0x1000);
++		if (ret < 0)
++			goto err_comm_fail;
++		addr += 0x1000;
++	}
++
++	/* 3. Update Main code 2 */
++	ret = cmd_update_flash(data, 0x00006000, 0x1000);
++	if (ret < 0)
++		goto err_comm_fail;
++
++	/* 4. Update FW info to USB descriptor */
++	addr = 0x00004000;
++	for (i = 0; i < 2; i++) {
++		ret = cmd_update_flash(data, addr, 0x1000);
++		if (ret < 0)
++			goto err_comm_fail;
++		addr += 0x1000;
++	}
++
++
++	/* 5. Update boot-code */
++	addr = 0x00000000;
++	for (i = 0; i < 4; i++) {
++		ret = cmd_update_flash(data, addr, 0x1000);
++		if (ret < 0)
++			goto err_comm_fail;
++		addr += 0x1000;
++	}
++
++
++	/* 6. Update rodata-code */
++	addr = 0x0001d000;
++	for (i = 0; i < 2; i++) {
++		ret = cmd_update_flash(data, addr, 0x1000);
++		if (ret < 0)
++			goto err_comm_fail;
++		addr += 0x1000;
++	}
+ 
+ 
+ 	msleep(10000); /* Time to finalize the fw */
+-- 
+2.7.4
+

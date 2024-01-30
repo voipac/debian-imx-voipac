@@ -1,9 +1,13 @@
 #!/bin/bash
+#
+# Copyrigh: Voipac s.r.o.
+# Author: Marek Belisko <marek.belisko@voipac.com>
+#
 
 set -e
 
 source helpers/sources.sh
-source helpers/toolchain.sh
+#source helpers/toolchain.sh
 source "machines/${MACHINE}/${MACHINE}.sh"
 
 UBOOT_SRCREV="4979a99482f7e04a3c1f4fb55e3182395ee8f710"
@@ -21,6 +25,8 @@ FIRMWARE_PATH="sources/firmware-imx"
 IMX_MKIMAGE_SRCREV="57fec89e550864d2f7ac7fa01fd4143b3e18c71d"
 IMX_MKIMAGE_SRCBRANCH="imx_5.4.70_2.3.0"
 IMX_MKIMAGE_PATH="sources/imx-mkimage"
+
+TOP_DIR="$(pwd)"
 
 
 mkdir -p sources
@@ -59,9 +65,10 @@ function make_uboot()
 
     # make atf image
     cd ${ATF_PATH}
-    LDFLAGS="" make -j$(nproc) CROSS_COMPILE=${G_CROSS_COMPILER_PATH}/${G_CROSS_COMPILER_PREFIX} \
+    LDFLAGS="" make -j$(nproc) CROSS_COMPILE=aarch64-linux-gnu- \
                     PLAT=imx8mq bl31
-    cp build/imx8mq/release/bl31.bin ../../${UBOOT_PATH} "../../${IMX_MKIMAGE_PATH}/iMX8M"
+    cp build/imx8mq/release/bl31.bin "../../${IMX_MKIMAGE_PATH}/iMX8M"
+    cp build/imx8mq/release/bl31.bin "../../${UBOOT_PATH}"
     cd -
 
     # fetch and process firmware
@@ -73,8 +80,10 @@ function make_uboot()
         if [ ! -d $(basename ${FIRMWARE_BINARY} .bin) ]; then
             ./${FIRMWARE_BINARY}
         fi
-        cp $(basename ${FIRMWARE_BINARY} .bin)/firmware/hdmi/cadence/signed_hdmi_imx8m.bin ../../${UBOOT_PATH} "../../${IMX_MKIMAGE_PATH}/iMX8M"
-        cp $(basename ${FIRMWARE_BINARY} .bin)/firmware/ddr/synopsys/lpddr4*.bin ../../${UBOOT_PATH} "../../${IMX_MKIMAGE_PATH}/iMX8M"
+        cp $(basename ${FIRMWARE_BINARY} .bin)/firmware/hdmi/cadence/signed_hdmi_imx8m.bin "../../${UBOOT_PATH}"
+        cp $(basename ${FIRMWARE_BINARY} .bin)/firmware/hdmi/cadence/signed_hdmi_imx8m.bin "../../${IMX_MKIMAGE_PATH}/iMX8M"
+        cp $(basename ${FIRMWARE_BINARY} .bin)/firmware/ddr/synopsys/lpddr4*.bin "../../${UBOOT_PATH}"
+        cp $(basename ${FIRMWARE_BINARY} .bin)/firmware/ddr/synopsys/lpddr4*.bin "../../${IMX_MKIMAGE_PATH}/iMX8M"
     cd -
 
     # cd to sources
@@ -89,12 +98,12 @@ function make_uboot()
 
 	# make U-Boot
 	make -j$(nproc)  -C ${2} \
-		CROSS_COMPILE=${G_CROSS_COMPILER_PATH}/${G_CROSS_COMPILER_PREFIX} \
+		CROSS_COMPILE=aarch64-linux-gnu- \
 		${G_CROSS_COMPILER_JOPTION}
 
 	# make fw_printenv
 	make envtools -C ${2} \
-		CROSS_COMPILE=${G_CROSS_COMPILER_PATH}/${G_CROSS_COMPILER_PREFIX} \
+		CROSS_COMPILE=aarch64-linux-gnu- \
 		${G_CROSS_COMPILER_JOPTION}
 
 	#cp ${1}/tools/env/fw_printenv ${2}
@@ -110,6 +119,15 @@ function make_uboot()
     cd -
     make SOC=iMX8MQ flash_evk
     cd -
+
+    cd ${TOP_DIR}
+}
+
+# $1 - destination path
+function copy_bootloader()
+{
+    dts="$1"
+    cp ${IMX_MKIMAGE_PATH}/iMX8M/flash.bin ${dts}
 }
 
 

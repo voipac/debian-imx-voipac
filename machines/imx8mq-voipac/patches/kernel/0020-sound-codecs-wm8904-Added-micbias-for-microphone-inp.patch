@@ -1,0 +1,33 @@
+From f91e601617f28bd4fed5817911be131d5c8bef7c Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Wed, 15 Mar 2023 08:57:38 +0100
+Subject: [PATCH] sound: codecs: wm8904: Added micbias for microphone input
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ sound/soc/codecs/wm8904.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/sound/soc/codecs/wm8904.c b/sound/soc/codecs/wm8904.c
+index 23d504d..c2e5984 100644
+--- a/sound/soc/codecs/wm8904.c
++++ b/sound/soc/codecs/wm8904.c
+@@ -1080,6 +1080,7 @@ static const struct snd_soc_dapm_route core_intercon[] = {
+ static const struct snd_soc_dapm_route adc_intercon[] = {
+ 	{ "Left Capture Mux", "IN1L", "IN1L" },
+ 	{ "Left Capture Mux", "IN2L", "IN2L" },
++	{ "IN2L", NULL, "MICBIAS" },
+ 	{ "Left Capture Mux", "IN3L", "IN3L" },
+ 
+ 	{ "Left Capture Inverting Mux", "IN1L", "IN1L" },
+@@ -1094,6 +1095,7 @@ static const struct snd_soc_dapm_route adc_intercon[] = {
+ 
+ 	{ "Right Capture Mux", "IN1R", "IN1R" },
+ 	{ "Right Capture Mux", "IN2R", "IN2R" },
++	{ "IN2R", NULL, "MICBIAS" },
+ 	{ "Right Capture Mux", "IN3R", "IN3R" },
+ 
+ 	{ "Right Capture Inverting Mux", "IN1R", "IN1R" },
+-- 
+2.7.4
+

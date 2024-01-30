@@ -1,0 +1,77 @@
+From 0cedee342741620784f18069a5d53fbe16444704 Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Thu, 3 Feb 2022 13:19:24 +0100
+Subject: [PATCH] can:spi:mcp25xxfd: Don't retry when device cannot be found
+
+Recursive calls lead to kernel panic:
+[    5.267396] Insufficient stack space to handle exception!
+[    5.267426] ESR: 0x96000047 -- DABT (current EL)
+[    5.277490] FAR: 0xffff800011e47fe0
+[    5.280992] Task stack:     [0xffff800011e48000..0xffff800011e4c000]
+[    5.287360] IRQ stack:      [0xffff800010000000..0xffff800010004000]
+[    5.293723] Overflow stack: [0xffff00007fb652a0..0xffff00007fb662a0]
+[    5.300107] CPU: 0 PID: 34 Comm: kworker/0:1 Not tainted 5.4.74-05558-gbd4eb71fae4e-dirty #39
+[    5.308644] Hardware name: NXP i.MX8MQ EVK Voipac (DT)
+[    5.313851] Workqueue: events deferred_probe_work_func
+[    5.319009] pstate: 00000085 (nzcv daIf -PAN -UAO)
+[    5.323835] pc : __rcu_read_unlock+0x0/0x190
+[    5.328134] lr : cpuacct_charge+0x74/0x88
+[    5.332154] sp : ffff800011e48000
+[    5.335478] x29: ffff800011e48000 x28: ffff800011106100
+[    5.340806] x27: ffff800011e48120 x26: ffff00007a2b4600
+[    5.346134] x25: ffff8000110d29f8 x24: ffff00007a2b4b88
+[    5.351461] x23: ffff00007a2b4600 x22: ffff800011a18000
+[    5.356787] x21: ffff00007a2b4600 x20: 00000000002ebf30
+[    5.362114] x19: 0000000000000001 x18: ffffffffffffffff
+[    5.367440] x17: 0000000000000000 x16: 0000000000000000
+[    5.372766] x15: ffff800011a188c8 x14: 0000000000000000
+[    5.378091] x13: 0000000000000174 x12: 0000000000034b52
+[    5.383417] x11: 00000000000000cc x10: 00000000000000d5
+[    5.388743] x9 : 0000000000000001 x8 : ffff00007fb72440
+[    5.394069] x7 : ffff00007fb72f00 x6 : 0000000000000003
+[    5.399392] x5 : 0000000139f5d0c1 x4 : 0000000000000008
+[    5.404719] x3 : 00000000ca91418f x2 : 0000000000000000
+[    5.410046] x1 : ffff00007a2b4600 x0 : ffff00007fb67120
+[    5.415387] Kernel panic - not syncing: kernel stack overflow
+[    5.421151] CPU: 0 PID: 34 Comm: kworker/0:1 Not tainted 5.4.74-05558-gbd4eb71fae4e-dirty #39
+[    5.429684] Hardware name: NXP i.MX8MQ EVK Voipac (DT)
+[    5.434836] Workqueue: events deferred_probe_work_func
+[    5.439991] Call trace:
+[    5.442462]  dump_backtrace+0x0/0x150
+[    5.446144]  show_stack+0x14/0x20
+[    5.449489]  dump_stack+0xbc/0x11c
+[    5.452912]  panic+0x16c/0x38c
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ drivers/net/can/spi/mcp25xxfd/mcp25xxfd_clock.c | 14 --------------
+ 1 file changed, 14 deletions(-)
+
+diff --git a/drivers/net/can/spi/mcp25xxfd/mcp25xxfd_clock.c b/drivers/net/can/spi/mcp25xxfd/mcp25xxfd_clock.c
+index 657a8e0..2a4ad78 100644
+--- a/drivers/net/can/spi/mcp25xxfd/mcp25xxfd_clock.c
++++ b/drivers/net/can/spi/mcp25xxfd/mcp25xxfd_clock.c
+@@ -329,20 +329,6 @@ int mcp25xxfd_clock_probe(struct mcp25xxfd_priv *priv)
+ 	/* this will also enable the MCP25XXFD_CLK_USER_CAN clock */
+ 	ret = _mcp25xxfd_clock_probe(priv);
+ 
+-	/* on error retry a second time */
+-	if (ret == -ENODEV) {
+-		ret = mcp25xxfd_clock_probe(priv);
+-		if (!ret)
+-			dev_info(&priv->spi->dev,
+-				 "found device only during retry\n");
+-	}
+-	if (ret) {
+-		if (ret == -ENODEV)
+-			dev_err(&priv->spi->dev,
+-				"Cannot initialize MCP%x. Wrong wiring? (oscilator register reads as %08x)\n",
+-				priv->model, priv->regs.osc);
+-	}
+-
+ 	return ret;
+ }
+ 
+-- 
+2.7.4
+

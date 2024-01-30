@@ -1,4 +1,8 @@
 #!/bin/bash
+#
+# Copyrigh: Voipac s.r.o.
+# Author: Marek Belisko <marek.belisko@voipac.com>
+#
 
 # get git sources
 # $1 - repo
@@ -8,7 +12,7 @@
 function get_git_src()
 {
         # clone src code
-        git clone ${1} -b ${2} ${3}
+        git clone ${1} -b ${2} --single-branch ${3}
         cd ${3}
         git reset --hard ${4}
         cd -
@@ -17,14 +21,8 @@ function get_git_src()
 # get remote file
 # $1 - remote file
 # $2 - local file
-# $3 - optional sha256sum
 function get_remote_file()
 {
         # download remote file
         wget -c ${1} -O ${2}
-
-        # verify sha256sum
-        if [ -n "${3}" ]; then
-                echo "${3} ${2}" | sha256sum -c
-        fi
 }

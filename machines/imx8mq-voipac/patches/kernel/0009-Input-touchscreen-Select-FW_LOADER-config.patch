@@ -1,0 +1,28 @@
+From e335ab4cfc799ee8992637f81b20ea872619fd0d Mon Sep 17 00:00:00 2001
+From: Dizni Prajosh <dizni.kp@gmail.com>
+Date: Thu, 13 Dec 2018 11:06:38 +0100
+Subject: [PATCH] Input: touchscreen: Select FW_LOADER config
+
+The driver needs firmware loader functionality for updating device
+firmware.
+
+Signed-off-by: Dizni Premdas <Dizni.Premdas@msc-technologies.eu>
+---
+ drivers/input/touchscreen/Kconfig | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/input/touchscreen/Kconfig b/drivers/input/touchscreen/Kconfig
+index 0a28fa9..d076b7e 100644
+--- a/drivers/input/touchscreen/Kconfig
++++ b/drivers/input/touchscreen/Kconfig
+@@ -1189,6 +1189,7 @@ config TOUCHSCREEN_SIS_95XX_I2C
+ 	tristate "SiS 95xx family I2C touchscreen"
+ 	depends on I2C
+ 	select CRC_ITU_T
++	select FW_LOADER
+ 	depends on GPIOLIB || COMPILE_TEST
+ 	help
+ 	  This enables support for SiS 95xx family over I2C based touchscreens.
+-- 
+2.7.4
+

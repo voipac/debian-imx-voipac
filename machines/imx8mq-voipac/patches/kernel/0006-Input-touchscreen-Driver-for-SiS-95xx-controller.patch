@@ -1,0 +1,54 @@
+From 0b1292ab4122ad0489f5419c45d9d8db226094ac Mon Sep 17 00:00:00 2001
+From: Dizni Prajosh <dizni.kp@gmail.com>
+Date: Sun, 18 Feb 2018 21:27:24 +0100
+Subject: [PATCH] Input: touchscreen: Driver for SiS 95xx controller
+
+The Makefile and Kconfig file for the driver. The driver uses the
+CRC_ITU_T library for crc calculation in the transmit and
+reception frames. So this library will be selected.
+
+Signed-off-by: Dizni Premdas <Dizni.Premdas@msc-technologies.eu>
+---
+ drivers/input/touchscreen/Kconfig  | 13 +++++++++++++
+ drivers/input/touchscreen/Makefile |  1 +
+ 2 files changed, 14 insertions(+)
+
+diff --git a/drivers/input/touchscreen/Kconfig b/drivers/input/touchscreen/Kconfig
+index f0bcef6..0a28fa9 100644
+--- a/drivers/input/touchscreen/Kconfig
++++ b/drivers/input/touchscreen/Kconfig
+@@ -1185,6 +1185,19 @@ config TOUCHSCREEN_SIS_I2C
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called sis_i2c.
+ 
++config TOUCHSCREEN_SIS_95XX_I2C
++	tristate "SiS 95xx family I2C touchscreen"
++	depends on I2C
++	select CRC_ITU_T
++	depends on GPIOLIB || COMPILE_TEST
++	help
++	  This enables support for SiS 95xx family over I2C based touchscreens.
++
++	  If unsure, say N.
++
++	  To compile this driver as a module, choose M here: the
++	  module will be called sis_i2c_95xx_ts.
++
+ config TOUCHSCREEN_ST1232
+ 	tristate "Sitronix ST1232 or ST1633 touchscreen controllers"
+ 	depends on I2C
+diff --git a/drivers/input/touchscreen/Makefile b/drivers/input/touchscreen/Makefile
+index 28985ca..b41107e 100644
+--- a/drivers/input/touchscreen/Makefile
++++ b/drivers/input/touchscreen/Makefile
+@@ -77,6 +77,7 @@ obj-$(CONFIG_TOUCHSCREEN_S3C2410)	+= s3c2410_ts.o
+ obj-$(CONFIG_TOUCHSCREEN_S6SY761)	+= s6sy761.o
+ obj-$(CONFIG_TOUCHSCREEN_SILEAD)	+= silead.o
+ obj-$(CONFIG_TOUCHSCREEN_SIS_I2C)	+= sis_i2c.o
++obj-$(CONFIG_TOUCHSCREEN_SIS_95XX_I2C)	+= sis_i2c_95xx_ts.o
+ obj-$(CONFIG_TOUCHSCREEN_ST1232)	+= st1232.o
+ obj-$(CONFIG_TOUCHSCREEN_STMFTS)	+= stmfts.o
+ obj-$(CONFIG_TOUCHSCREEN_STMPE)		+= stmpe-ts.o
+-- 
+2.7.4
+

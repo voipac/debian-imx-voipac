@@ -1,0 +1,27 @@
+From b15195f73bd598b3e01f46ce6d4f215760500335 Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Fri, 19 Nov 2021 07:25:19 +0100
+Subject: [PATCH] sis_i2c_95xx_ts: Drop using of reset pin
+
+We have system reset pin connected instead of custom gpio.
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ drivers/input/touchscreen/sis_i2c_95xx_ts.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/drivers/input/touchscreen/sis_i2c_95xx_ts.c b/drivers/input/touchscreen/sis_i2c_95xx_ts.c
+index d5ecc97..3ac9a8b 100755
+--- a/drivers/input/touchscreen/sis_i2c_95xx_ts.c
++++ b/drivers/input/touchscreen/sis_i2c_95xx_ts.c
+@@ -147,6 +147,7 @@ static int __sis_write(struct i2c_client *client, u16 len, void *val)
+ static void sis_ctrl_reset_hard(struct i2c_client *client,
+ 	struct sis_platform_data *pdata)
+ {
++	return;
+ 	if (!gpio_is_valid(pdata->gpio_rst)) {
+ 		dev_info(&client->dev, "Must have reset GPIO for hard reset\n");
+ 		return;
+-- 
+2.7.4
+

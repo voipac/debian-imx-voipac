@@ -1,0 +1,148 @@
+From b22e53abf09f0bf5b90451b36fc39dd950e1b7a1 Mon Sep 17 00:00:00 2001
+From: Dizni Prajosh <dizni.kp@gmail.com>
+Date: Thu, 13 Dec 2018 11:40:29 +0100
+Subject: [PATCH] Input: touchscreen: SiS95xx driver removed recalib added
+ reset
+
+Removed recalibration support as command87 is no more valid.
+Added soft reset support through sysfs.
+
+Signed-off-by: Dizni Premdas <Dizni.Premdas@msc-technologies.eu>
+---
+ drivers/input/touchscreen/sis_i2c_95xx_ts.c | 70 +++--------------------------
+ 1 file changed, 7 insertions(+), 63 deletions(-)
+
+diff --git a/drivers/input/touchscreen/sis_i2c_95xx_ts.c b/drivers/input/touchscreen/sis_i2c_95xx_ts.c
+index 2dc2da6..61e3838 100644
+--- a/drivers/input/touchscreen/sis_i2c_95xx_ts.c
++++ b/drivers/input/touchscreen/sis_i2c_95xx_ts.c
+@@ -259,7 +259,7 @@ static int send_cmd82_reset_soft(struct sis_data *data)
+ 		return ret;
+ 
+ 	/* No ACK for RESET */
+-	msleep(4000); /* time to reboot */
++	msleep(6000); /* time to reboot */
+ 
+ 	return 0;
+ }
+@@ -430,41 +430,6 @@ static int send_cmd86_read(struct sis_data *data, uint32_t addr,
+ 	return 0;
+ }
+ 
+-static int send_cmd87_recalib(struct sis_data *data)
+-{
+-	uint8_t cmd[8];
+-	uint8_t rsp[MAX_RD_SIZE] = {0};
+-	int ret;
+-
+-	cmd[0] = OUTPUT_REG & 0x00ff;
+-	cmd[1] = (OUTPUT_REG >> 8) & 0x00ff;
+-	cmd[2] = 0x06;
+-	cmd[3] = 0x00;
+-	cmd[4] = REPORTID_VENDOR_CMD;
+-	cmd[5] = 0x00;
+-	cmd[6] = CMD_RECALIB;
+-
+-	ret = insert_crc(cmd, sizeof(cmd));
+-	if (ret < 0)
+-		return ret;
+-
+-	ret = __sis_write(data->client, sizeof(cmd), cmd);
+-	if (ret < 0)
+-		return ret;
+-
+-	ret = __sis_read(data->client, sizeof(rsp), rsp);
+-	if (ret < 0)
+-		return ret;
+-
+-	ret = response_valid(rsp);
+-	if (ret < 0)
+-		return ret;
+-
+-	msleep(2000); /* wait time */
+-
+-	return 0;
+-}
+-
+ static int update_fw_info(struct sis_data *data)
+ {
+ 	int ret = 0;
+@@ -1065,7 +1030,7 @@ static ssize_t sis_update_fw(struct device *dev, struct device_attribute *attr,
+ 	return ret;
+ }
+ 
+-static ssize_t sis_recalib(struct device *dev, struct device_attribute *attr,
++static ssize_t sis_reset(struct device *dev, struct device_attribute *attr,
+ 		const char *buf, size_t count)
+ {
+ 	struct sis_data *data = dev_get_drvdata(dev);
+@@ -1075,30 +1040,9 @@ static ssize_t sis_recalib(struct device *dev, struct device_attribute *attr,
+ 	if (ret)
+ 		return ret;
+ 
+-	dev_info(dev, "Calibrating controller");
++	dev_info(dev, "Resetting controller");
+ 	disable_irq(data->irq);
+ 
+-	ret = send_cmd85_change_mode(data, PWR_CMD_ACTIVE);
+-	if (ret < 0)
+-		goto err_comm_fail;
+-
+-	ret = send_cmd85_change_mode(data, ENABLE_DIAGNOSIS_MODE);
+-	if (ret < 0)
+-		goto err_comm_fail;
+-
+-	ret = send_cmd87_recalib(data);
+-	if (ret < 0)
+-		goto err_comm_fail;
+-
+-	ret = send_cmd85_change_mode(data, PWR_CMD_FWCTRL);
+-	if (ret < 0)
+-		goto err_comm_fail;
+-
+-	ret = send_cmd85_change_mode(data, DISABLE_DIAGNOSIS_MODE);
+-	if (ret < 0)
+-		goto err_comm_fail;
+-
+-	dev_info(dev, "Resetting device");
+ 	ret = send_cmd82_reset_soft(data);
+ 	if (ret < 0)
+ 		goto err_comm_fail;
+@@ -1109,7 +1053,7 @@ static ssize_t sis_recalib(struct device *dev, struct device_attribute *attr,
+ 	if (ret < 0)
+ 		goto err_comm_fail;
+ 
+-	dev_info(dev, "Calibration successful");
++	dev_info(dev, "Reset successful");
+ 
+ 	enable_irq(data->irq);
+ 
+@@ -1118,7 +1062,7 @@ static ssize_t sis_recalib(struct device *dev, struct device_attribute *attr,
+ 	return count;
+ 
+ err_comm_fail:
+-	dev_err(dev, "Calibration failed");
++	dev_err(dev, "Reset failed");
+ 
+ 	mutex_unlock(&data->diag_mutex);
+ 	return ret;
+@@ -1127,14 +1071,14 @@ static ssize_t sis_recalib(struct device *dev, struct device_attribute *attr,
+ static DEVICE_ATTR(ver, S_IRUSR, ver_show, NULL);
+ static DEVICE_ATTR(fw_info, S_IRUSR, fw_info_show, NULL);
+ static DEVICE_ATTR(update_fw, S_IWUSR, NULL, sis_update_fw);
+-static DEVICE_ATTR(recalib, S_IWUSR, NULL, sis_recalib);
++static DEVICE_ATTR(reset_sw, S_IWUSR, NULL, sis_reset);
+ static DEVICE_ATTR(sensor_data, S_IRUSR, sensor_data_show, NULL);
+ 
+ static struct attribute *sis_attrs[] = {
+ 	&dev_attr_ver.attr,
+ 	&dev_attr_fw_info.attr,
+ 	&dev_attr_update_fw.attr,
+-	&dev_attr_recalib.attr,
++	&dev_attr_reset_sw.attr,
+ 	&dev_attr_sensor_data.attr,
+ 	NULL,   /* need to NULL terminate the list of attributes */
+ };
+-- 
+2.7.4
+
