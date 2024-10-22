@@ -6,7 +6,7 @@
 
 apt update
 
-apt install \
+apt install -y \
 	sudo \
 	ssh \
 	net-tools \
