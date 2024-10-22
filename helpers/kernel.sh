@@ -9,12 +9,6 @@ set -e
 source helpers/sources.sh
 source "machines/${MACHINE}/${MACHINE}.sh"
 
-KERNEL_SRCBRANCH="5.4-2.1.x-imx"
-KERNEL_SRCREV="074a74780f813c7e6037f3ca3e581c405276e502"
-KERNEL_URL="https://github.com/Freescale/linux-fslc.git"
-KERNEL_PATH="sources/linux-fslc-imx"
-UIMAGE_LOADADDR="0x40480000"
-
 mkdir -p ${KERNEL_PATH}
 
 # verify if we have sources available

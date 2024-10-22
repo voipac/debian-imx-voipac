@@ -6,6 +6,8 @@
 
 set -e
 
+source "machines/${MACHINE}/${MACHINE}.sh"
+
 ROOTFS_PATH="debian-rootfs"
 
 mkdir -p ${ROOTFS_PATH}
@@ -14,7 +16,7 @@ function cmd_make_rootfs()
 {
 	if [ $(ls ${ROOTFS_PATH} | wc -l) = 0 ];then
 		# debootstrap debian
-		debootstrap --arch arm64 bullseye ${ROOTFS_PATH} http://ftp.uk.debian.org/debian
+		debootstrap --arch arm64 ${DEBIAN_RELEASE} ${ROOTFS_PATH} http://ftp.uk.debian.org/debian
 
 		mkdir -p ${ROOTFS_PATH}/etc/sudoers.d/
 		echo "user ALL=(root) /usr/bin/apt-get, /usr/bin/dpkg, /usr/bin/vi, /sbin/reboot" > ${ROOTFS_PATH}/etc/sudoers.d/user

@@ -14,7 +14,7 @@ function usage()
     echo "Make Debian ${DEB_RELEASE} image and create a bootabled SD card"
     echo
     echo "Usage:"
-    echo " MACHINE=imx8mq-voipac ./${SCRIPT_NAME} options"
+    echo " MACHINE=imx8mq-voipac|imx93-voipac ./${SCRIPT_NAME} options"
     echo
     echo "Options:"
     echo "  -h|--help   -- print this help"
