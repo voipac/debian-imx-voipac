@@ -4,7 +4,7 @@
 # Author: Marek Belisko <marek.belisko@voipac.com>
 #
 
-set -e
+set -ex
 
 source helpers/sources.sh
 #source helpers/toolchain.sh
@@ -17,17 +17,17 @@ TOP_DIR="$(pwd)"
 mkdir -p sources
 
 # verify if we have sources available
-if [ $(ls ${UBOOT_PATH} | wc -l) = 0 ]; then
+#if [ $(ls ${UBOOT_PATH} | wc -l) = 0 ]; then
     get_git_src "https://github.com/nxp-imx/uboot-imx.git" "${UBOOT_SRCBRANCH}" "$(pwd)/${UBOOT_PATH}" "${UBOOT_SRCREV}"
-fi
+#fi
 
-if [ $(ls ${ATF_PATH} | wc -l) = 0 ]; then
+#if [ $(ls ${ATF_PATH} | wc -l) = 0 ]; then
     get_git_src "https://github.com/nxp-imx/imx-atf.git" "${ATF_SRCBRANCH}" "$(pwd)/${ATF_PATH}" "${ATF_SRCREV}"
-fi
+#fi
 
-if [ $(ls ${IMX_MKIMAGE_PATH} | wc -l) = 0 ]; then
+#if [ $(ls ${IMX_MKIMAGE_PATH} | wc -l) = 0 ]; then
     get_git_src "https://github.com/nxp-imx/imx-mkimage.git" "${IMX_MKIMAGE_SRCBRANCH}" "$(pwd)/${IMX_MKIMAGE_PATH}" "${IMX_MKIMAGE_SRCREV}"
-fi
+#fi
 
 
 # $1 - path to machine specific patches
@@ -39,21 +39,22 @@ function cmd_make_uboot()
 function make_uboot()
 {
     # apply board specific patches
-    if [ ! -f "${UBOOT_PATH}/.applied" ]; then
-        cd ${UBOOT_PATH}
-        mkdir -p mbox
-        cp -f ${1}/*.patch mbox
-        git am -3 mbox/*
-        touch .applied
-        cd -
-    fi
+    cd ${UBOOT_PATH}
+    mkdir -p mbox
+    cp -f ${1}/*.patch mbox
+    git am -3 mbox/*
+    cd -
 
     # make atf image
     cd ${ATF_PATH}
     LDFLAGS="" make -j$(nproc) CROSS_COMPILE=aarch64-linux-gnu- \
-                    PLAT=imx8mq bl31
-    cp build/imx8mq/release/bl31.bin "../../${IMX_MKIMAGE_PATH}/iMX8M"
-    cp build/imx8mq/release/bl31.bin "../../${UBOOT_PATH}"
+                    PLAT=${PLAT} bl31
+    if [ ${PLAT} = "imx8mq" ]; then
+        cp build/${PLAT}/release/bl31.bin "../../${IMX_MKIMAGE_PATH}/iMX8M"
+    elif [ ${PLAT} = "imx93" ]; then
+        cp build/${PLAT}/release/bl31.bin "../../${IMX_MKIMAGE_PATH}/iMX93"
+    fi
+    cp build/${PLAT}/release/bl31.bin "../../${UBOOT_PATH}"
     cd -
 
     # fetch and process firmware
@@ -61,15 +62,30 @@ function make_uboot()
     get_remote_file ${FIRMWARE_IMX} ${FIRMWARE_PATH}/${FIRMWARE_BINARY}
 
     cd ${FIRMWARE_PATH}
-        chmod +x ${FIRMWARE_BINARY} 
-        if [ ! -d $(basename ${FIRMWARE_BINARY} .bin) ]; then
-            ./${FIRMWARE_BINARY}
-        fi
+    chmod +x ${FIRMWARE_BINARY} 
+    if [ ! -d $(basename ${FIRMWARE_BINARY} .bin) ]; then
+       ./${FIRMWARE_BINARY}
+    fi
+    if [ ${PLAT} = "imx8mq" ]; then
         cp $(basename ${FIRMWARE_BINARY} .bin)/firmware/hdmi/cadence/signed_hdmi_imx8m.bin "../../${UBOOT_PATH}"
-        cp $(basename ${FIRMWARE_BINARY} .bin)/firmware/hdmi/cadence/signed_hdmi_imx8m.bin "../../${IMX_MKIMAGE_PATH}/iMX8M"
-        cp $(basename ${FIRMWARE_BINARY} .bin)/firmware/ddr/synopsys/lpddr4*.bin "../../${UBOOT_PATH}"
-        cp $(basename ${FIRMWARE_BINARY} .bin)/firmware/ddr/synopsys/lpddr4*.bin "../../${IMX_MKIMAGE_PATH}/iMX8M"
+	cp $(basename ${FIRMWARE_BINARY} .bin)/firmware/hdmi/cadence/signed_hdmi_imx8m.bin "../../${IMX_MKIMAGE_PATH}/iMX8M"
+	cp $(basename ${FIRMWARE_BINARY} .bin)/firmware/ddr/synopsys/lpddr4*.bin "../../${UBOOT_PATH}"
+	cp $(basename ${FIRMWARE_BINARY} .bin)/firmware/ddr/synopsys/lpddr4*.bin "../../${IMX_MKIMAGE_PATH}/iMX8M"
+    elif [ ${PLAT} = "imx93" ]; then
+        cp $(basename ${FIRMWARE_BINARY} .bin)/firmware/ddr/synopsys/lpddr4*.bin "../../${IMX_MKIMAGE_PATH}/iMX93"
+    fi
     cd -
+
+    # firmware sentinel
+    if [ ${PLAT} = "imx93" ]; then
+        mkdir -p ${FIRMWARE_SENTINEL_PATH}
+	BINARY=$(basename "${FIRMWARE_SENTINEL}")
+        get_remote_file ${FIRMWARE_SENTINEL} ${FIRMWARE_SENTINEL_PATH}/${BINARY}
+	cd ${FIRMWARE_SENTINEL_PATH}
+	chmod +x ${BINARY} && ./${BINARY}
+	cp $(basename ${BINARY} .bin)/mx93a1-ahab-container.img "../../${IMX_MKIMAGE_PATH}/iMX93"
+	cd -
+    fi
 
     # cd to sources
     cd ${UBOOT_PATH}
@@ -92,17 +108,28 @@ function make_uboot()
 		${G_CROSS_COMPILER_JOPTION}
 
 	#cp ${1}/tools/env/fw_printenv ${2}
-    cp spl/u-boot-spl.bin "../../${IMX_MKIMAGE_PATH}/iMX8M"
-    cp u-boot-nodtb.bin "../../${IMX_MKIMAGE_PATH}/iMX8M"
-    cp arch/arm/dts/imx8mq-evk-voipac.dtb "../../${IMX_MKIMAGE_PATH}/iMX8M"
-    cp tools/mkimage "../../${IMX_MKIMAGE_PATH}/iMX8M/mkimage_uboot"
+    if [ ${PLAT} = "imx8mq" ]; then
+        cp spl/u-boot-spl.bin "../../${IMX_MKIMAGE_PATH}/iMX8M"
+        cp u-boot-nodtb.bin "../../${IMX_MKIMAGE_PATH}/iMX8M"
+        cp arch/arm/dts/imx8mq-evk-voipac.dtb "../../${IMX_MKIMAGE_PATH}/iMX8M"
+        cp tools/mkimage "../../${IMX_MKIMAGE_PATH}/iMX8M/mkimage_uboot"
+    elif [ ${PLAT} = "imx93" ]; then
+	cp spl/u-boot-spl.bin "../../${IMX_MKIMAGE_PATH}/iMX93"
+        cp u-boot.bin "../../${IMX_MKIMAGE_PATH}/iMX93"
+
+    fi
     cd -
 
     cd ${IMX_MKIMAGE_PATH}
-    cd iMX8M
-    ln -sf imx8mq-evk-voipac.dtb imx8mq-evk.dtb
-    cd -
-    make SOC=iMX8MQ flash_evk
+
+    if [ ${PLAT} = "imx8mq" ]; then
+        cd iMX8M
+        ln -sf imx8mq-evk-voipac.dtb imx8mq-evk.dtb
+        cd -
+        make SOC=iMX8MQ flash_evk
+    elif [ ${PLAT} = "imx93" ]; then
+        make SOC=iMX9 REV=A1 flash_singleboot
+    fi
     cd -
 
     cd ${TOP_DIR}
@@ -112,7 +139,11 @@ function make_uboot()
 function copy_bootloader()
 {
     dts="$1"
-    cp ${IMX_MKIMAGE_PATH}/iMX8M/flash.bin ${dts}
+    if [ ${PLAT} = "imx8mq" ]; then
+        cp ${IMX_MKIMAGE_PATH}/iMX8M/flash.bin ${dts}
+    elif [ ${PLAT} = "imx93" ]; then
+        cp ${IMX_MKIMAGE_PATH}/iMX93/flash.bin ${dts}
+    fi
 }
 
 

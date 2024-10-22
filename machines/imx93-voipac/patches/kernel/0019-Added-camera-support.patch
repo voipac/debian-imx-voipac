@@ -1,0 +1,170 @@
+From b306f41aeddc55d3dbec05ff217e03d6115cd54a Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Thu, 18 Jul 2024 09:12:00 +0200
+Subject: [PATCH] Added camera support
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ .../boot/dts/freescale/imx93-voipac-evk.dts   | 88 ++++++++++++-------
+ .../boot/dts/freescale/imx93-voipac-som.dtsi  | 30 -------
+ 2 files changed, 58 insertions(+), 60 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts b/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
+index b591de5b3196..852eaeff5770 100644
+--- a/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
++++ b/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
+@@ -23,6 +23,16 @@ reg_vref_1v8: regulator-adc-vref {
+ 		regulator-max-microvolt = <1800000>;
+ 	};
+ 
++	csi2_reg: regulator-csi-1v8 {
++               compatible = "regulator-fixed";
++               regulator-name = "csi2_pwup";
++               regulator-min-microvolt = <1800000>;
++               regulator-max-microvolt = <1800000>;
++               gpio = <&gpio_xten1 5 GPIO_ACTIVE_HIGH>;
++               enable-active-high;
++       };
++
++
+ 	reg_usdhc2_vmmc: regulator-usdhc2 {
+ 		compatible = "regulator-fixed";
+ 		pinctrl-names = "default";
+@@ -124,36 +134,6 @@ &sai3 {
+ 	fsl,sai-mclk-direction-output;
+ 	status = "okay";
+ };
+-
+-&micfil {
+-	#sound-dai-cells = <0>;
+-	pinctrl-names = "default", "sleep";
+-	pinctrl-0 = <&pinctrl_pdm>;
+-	pinctrl-1 = <&pinctrl_pdm_sleep>;
+-	assigned-clocks = <&clk IMX93_CLK_PDM>;
+-	assigned-clock-parents = <&clk IMX93_CLK_AUDIO_PLL>;
+-	assigned-clock-rates = <49152000>;
+-	status = "okay";
+-};
+-
+-&xcvr {
+-	#sound-dai-cells = <0>;
+-	pinctrl-names = "default", "sleep";
+-	pinctrl-0 = <&pinctrl_spdif>;
+-	pinctrl-1 = <&pinctrl_spdif_sleep>;
+-	clocks = <&clk IMX93_CLK_BUS_WAKEUP>,
+-		<&clk IMX93_CLK_SPDIF_GATE>,
+-		<&clk IMX93_CLK_DUMMY>,
+-		<&clk IMX93_CLK_AUD_XCVR_GATE>,
+-		<&clk IMX93_CLK_AUDIO_PLL>;
+-	clock-names = "ipg", "phy", "spba", "pll_ipg", "pll8k";
+-	assigned-clocks = <&clk IMX93_CLK_SPDIF>,
+-			 <&clk IMX93_CLK_AUDIO_XCVR>;
+-	assigned-clock-parents = <&clk IMX93_CLK_AUDIO_PLL>,
+-			 <&clk IMX93_CLK_SYS_PLL_PFD1_DIV2>;
+-	assigned-clock-rates = <12288000>, <200000000>;
+-	status = "okay";
+-};
+ 	
+ &adc1 {
+ 	vref-supply = <&reg_vref_1v8>;
+@@ -368,8 +348,56 @@ gpio_xten1: gpio_xten1@27 {
+                 #gpio-cells = <2>;
+                 reg = <0x27>;
+         };
++
++
++
++	 ov5640_mipi2: ov5640_mipi2@3c {
++               compatible = "ovti,ov5640";
++               reg = <0x3c>;
++               status = "okay";
++               clocks = <&clk IMX93_CLK_DUMMY>;
++               clock-names = "xclk";
++               csi_id = <1>;
++               DOVDD-supply = <&csi2_reg>; /* 1.8v */
++               mclk = <12000000>;
++               mclk_source = <0>;
++               port {
++                       ov5640_mipi2_ep: endpoint {
++                               remote-endpoint = <&mipi_csi_ep>;
++                       };
++               };
++       };
+ };
+ 
++&epxp {
++	status = "okay";
++};
++
++&cameradev {
++	status = "okay";
++};
++
++&isi_0 {
++	status = "okay";
++
++	cap_device {
++		status = "okay";
++	};
++};
++
++&mipi_csi {
++	status = "okay";
++
++	port {
++		mipi_csi_ep: endpoint {
++			remote-endpoint = <&ov5640_mipi2_ep>;
++			data-lanes = <2>;
++			cfg-clk-range = <28>;
++			hs-clk-range = <0x2b>;
++			bus-type = <4>;
++		};
++	};
++};
+ 
+ &iomuxc {
+ 
+diff --git a/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi b/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
+index 8a3eb511d851..c3386f1caadd 100644
+--- a/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
++++ b/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
+@@ -624,36 +624,6 @@ MX93_PAD_GPIO_IO20__GPIO2_IO20			0x51e
+ 		>;
+ 	};
+ 
+-	pinctrl_pdm: pdmgrp {
+-		fsl,pins = <
+-			MX93_PAD_PDM_CLK__PDM_CLK			0x31e
+-			MX93_PAD_PDM_BIT_STREAM0__PDM_BIT_STREAM00	0x31e
+-			MX93_PAD_PDM_BIT_STREAM1__PDM_BIT_STREAM01	0x31e
+-		>;
+-	};
+-
+-	pinctrl_pdm_sleep: pdmgrpsleep {
+-		fsl,pins = <
+-			MX93_PAD_PDM_CLK__GPIO1_IO08			0x31e
+-			MX93_PAD_PDM_BIT_STREAM0__GPIO1_IO09		0x31e
+-			MX93_PAD_PDM_BIT_STREAM1__GPIO1_IO10		0x31e
+-		>;
+-	};
+-
+-	pinctrl_spdif: spdifgrp {
+-		fsl,pins = <
+-			MX93_PAD_GPIO_IO22__SPDIF_IN		0x31e
+-			MX93_PAD_GPIO_IO23__SPDIF_OUT		0x31e
+-		>;
+-	};
+-
+-	pinctrl_spdif_sleep: spdifgrpsleep {
+-		fsl,pins = <
+-			MX93_PAD_GPIO_IO22__GPIO2_IO22		0x31e
+-			MX93_PAD_GPIO_IO23__GPIO2_IO23		0x31e
+-		>;
+-	};
+-
+ 	pinctrl_pca9535: pinctrl_pca9535 {
+ 		fsl,pins = <
+                 	MX93_PAD_GPIO_IO18__GPIO2_IO18             0x0000051E
+-- 
+2.34.1
+

@@ -11,6 +11,6 @@ RUN apt-get update && \
     git \
     vim \
     debootstrap \
-    libssl-dev bc qemu-user-static gcc-aarch64-linux-gnu kmod bison flex device-tree-compiler fdisk parted udev dosfstools
+    libssl-dev bc qemu-user-static gcc-aarch64-linux-gnu kmod bison flex device-tree-compiler fdisk parted udev dosfstools liblz-dev uuid-dev libgnutls28-dev
 
 

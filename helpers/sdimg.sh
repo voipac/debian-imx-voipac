@@ -29,7 +29,7 @@ function cmd_make_sdimg()
     # copy bootloader and dd it to final image
     copy_bootloader "/tmp"
 
-    dd if=/tmp/flash.bin of=${loopback} bs=1K seek=33
+    dd if=/tmp/flash.bin of=${loopback} bs=1K seek=${IMX_BOOT_OFFSET}
 
     rm -rf "/tmp/flash.bin"
 
@@ -46,7 +46,11 @@ function cmd_make_sdimg()
     
     # copy kernel + modules
     cp ${KERNEL_PATH}/arch/arm64/boot/Image /mnt/boot
-    cp ${KERNEL_PATH}/arch/arm64/boot/dts/freescale/imx8mq-evk-voipac-*.dtb /mnt/boot
+    if [ ${PLAT} = "imx8mq" ]; then
+        cp ${KERNEL_PATH}/arch/arm64/boot/dts/freescale/imx8mq-evk-voipac-*.dtb /mnt/boot
+    elif [ ${PLAT} = "imx93" ]; then
+        cp ${KERNEL_PATH}/arch/arm64/boot/dts/freescale/imx93-voipac*.dtb /mnt/boot
+    fi
     
     mkdir -p /mnt/root/lib/modules
     cp -r ${KERNEL_PATH}/modules/lib /mnt/root/usr

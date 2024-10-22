@@ -1,0 +1,66 @@
+From 45bc33fb51369890d2f7bf844a592e49a705b253 Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Wed, 10 Jul 2024 21:29:07 +0200
+Subject: [PATCH] Fixes for audio card
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ sound/soc/fsl/fsl-asoc-card.c | 11 +++++++----
+ 1 file changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/sound/soc/fsl/fsl-asoc-card.c b/sound/soc/fsl/fsl-asoc-card.c
+index 3cd44f92c596..442976e0e076 100644
+--- a/sound/soc/fsl/fsl-asoc-card.c
++++ b/sound/soc/fsl/fsl-asoc-card.c
+@@ -45,6 +45,7 @@
+ enum fsl_asoc_card_type {
+ 	CARD_CS42888 = 1,
+ 	CARD_WM8960,
++	CARD_WM8904,
+ 	CARD_WM8962,
+ 	CARD_SGTL5000,
+ 	CARD_AC97,
+@@ -316,12 +317,12 @@ static int fsl_asoc_card_hw_params(struct snd_pcm_substream *substream,
+ 		}
+ 	}
+ 
+-/*	if (of_device_is_compatible(dev->of_node, "fsl,imx-audio-wm8904")) {
+-		struct snd_soc_dai *codec_dai = rtd->codec_dai;
++	if (priv->card_type == CARD_WM8904) {
++		struct snd_soc_dai *codec_dai = asoc_rtd_to_codec(rtd, 0);
+ 		struct codec_priv *codec_priv = &priv->codec_priv;
+ 		unsigned int pll_out;
+ 
+-		ret = snd_soc_dai_set_tdm_slot(rtd->cpu_dai, 0, 0, 2,
++		ret = snd_soc_dai_set_tdm_slot(asoc_rtd_to_cpu(rtd, 0), 0, 0, 2,
+ 					       params_physical_width(params));
+ 		if (ret) {
+ 			dev_err(dev, "failed to set TDM slot for cpu dai\n");
+@@ -347,7 +348,7 @@ static int fsl_asoc_card_hw_params(struct snd_pcm_substream *substream,
+ 			dev_err(dev, "failed to set SYSCLK: %d\n", ret);
+ 			return ret;
+ 		}
+-	}*/
++	}
+ 
+ 	return 0;
+ 
+@@ -428,6 +429,7 @@ static int fsl_asoc_card_startup(struct snd_pcm_substream *substream)
+ 
+ 	if ((priv->card_type == CARD_WM8960 ||
+ 	     priv->card_type == CARD_WM8962 ||
++	     priv->card_type == CARD_WM8904 ||
+ 	     priv->card_type == CARD_WM8958)
+ 	    && !priv->is_codec_master) {
+ 		support_rates[0] = 8000;
+@@ -873,6 +875,7 @@ static int fsl_asoc_card_probe(struct platform_device *pdev)
+ 		priv->codec_priv.fll_id = WM8904_CLK_FLL;
+ 		priv->codec_priv.pll_id = WM8904_FLL_MCLK;
+ 		priv->dai_fmt |= SND_SOC_DAIFMT_CBM_CFM;
++		priv->card_type = CARD_WM8904;
+ 		if (strstr(cpu_np->name, "esai")) {
+ 			priv->cpu_priv.sysclk_freq[TX] = priv->codec_priv.mclk_freq;
+ 			priv->cpu_priv.sysclk_freq[RX] = priv->codec_priv.mclk_freq;
+-- 
+2.34.1
+

@@ -1,0 +1,38 @@
+From f3cdfb19c064c595ec1be0a4138fc0f5a30fdcb0 Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Thu, 4 Apr 2024 16:42:32 +0200
+Subject: [PATCH] gpio-pca953x: First read sometimes fails, retry
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ drivers/gpio/gpio-pca953x.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/gpio/gpio-pca953x.c b/drivers/gpio/gpio-pca953x.c
+index c80429b00b10..7eafdeafd305 100644
+--- a/drivers/gpio/gpio-pca953x.c
++++ b/drivers/gpio/gpio-pca953x.c
+@@ -491,7 +491,7 @@ static int pca953x_write_regs(struct pca953x_chip *chip, int reg, unsigned long
+ 
+ 	ret = regmap_bulk_write(chip->regmap, regaddr, value, NBANK(chip));
+ 	if (ret < 0) {
+-		dev_err(&chip->client->dev, "failed writing register\n");
++		dev_err(&chip->client->dev, "failed writing register:%d - err:%d\n", reg, ret);
+ 		return ret;
+ 	}
+ 
+@@ -1168,8 +1168,10 @@ static int pca953x_probe(struct i2c_client *client)
+ 		chip->regs = &pca953x_regs;
+ 		ret = device_pca95xx_init(chip, invert);
+ 	}
+-	if (ret)
++	if (ret) {
++		ret = -EPROBE_DEFER;
+ 		goto err_exit;
++	}
+ 
+ 	ret = pca953x_irq_setup(chip, irq_base);
+ 	if (ret)
+-- 
+2.34.1
+

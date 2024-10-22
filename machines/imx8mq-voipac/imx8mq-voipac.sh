@@ -4,6 +4,8 @@
 # Author: Marek Belisko <marek.belisko@voipac.com>
 #
 
+PLAT="imx8mq"
+
 # u-boot config
 G_UBOOT_DEF_CONFIG_MMC="imx8mq_evk_voipac_defconfig"
 
@@ -43,3 +45,6 @@ KERNEL_DEVICETREE=" \
 
 # debian release
 DEBIAN_RELEASE="bullseye"
+
+# imx-boot offset
+IMX_BOOT_OFFSET=33

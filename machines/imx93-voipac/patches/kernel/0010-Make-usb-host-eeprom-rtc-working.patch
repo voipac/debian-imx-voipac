@@ -1,0 +1,112 @@
+From fed57ea6d22af2e0b61a09d093d70d7784a290b8 Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Mon, 10 Jun 2024 14:34:31 +0200
+Subject: [PATCH] Make usb-host + eeprom + rtc working
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ .../boot/dts/freescale/imx93-voipac-evk.dts   | 44 ++++++++++++-------
+ .../boot/dts/freescale/imx93-voipac-som.dtsi  |  6 +++
+ 2 files changed, 35 insertions(+), 15 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts b/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
+index 5b06a7dc8409..38f3dc1b5a8f 100644
+--- a/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
++++ b/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
+@@ -240,9 +240,9 @@ ptn5110_2: tcpc@51 {
+ 		status = "okay";
+ 
+ 		port {
+-			typec2_dr_sw: endpoint {
++			/*typec2_dr_sw: endpoint {
+ 				remote-endpoint = <&usb2_drd_sw>;
+-			};
++			};*/
+ 		};
+ 
+ 		typec2_con: connector {
+@@ -290,7 +290,7 @@ usb1_drd_sw: endpoint {
+ };
+ 
+ &usbotg2 {
+-	dr_mode = "otg";
++	dr_mode = "host";
+ 	hnp-disable;
+ 	srp-disable;
+ 	adp-disable;
+@@ -299,12 +299,6 @@ &usbotg2 {
+ 	samsung,picophy-pre-emp-curr-control = <3>;
+ 	samsung,picophy-dc-vol-level-adjust = <7>;
+ 	status = "okay";
+-
+-	port {
+-		usb2_drd_sw: endpoint {
+-			remote-endpoint = <&typec2_dr_sw>;
+-		};
+-	};
+ };
+ 
+ 
+@@ -330,12 +324,27 @@ cap_device {
+ 
+ 
+ &lpi2c2 {
+-       gpio_xten0: gpio_xten0@23 {
+-                compatible = "nxp,pca9535";
+-                gpio-controller;
+-                #gpio-cells = <2>;
+-                reg = <0x23>;
+-        };
++	eeprom@53{
++		compatible = "atmel,24c02";
++		reg = <0x53>;
++		pagesize = <0x8>;
++	};
++
++	pcf8563: rtc@51 {
++		compatible = "nxp,pcf8563";
++		pinctrl-names = "default";
++		reg = <0x51>;
++		interrupt-parent = <&gpio_ext_som>;
++		interrupts = <4 IRQ_TYPE_LEVEL_LOW>;
++		#clock-cells = <0>;
++	};
++
++	gpio_xten0: gpio_xten0@23 {
++		compatible = "nxp,pca9535";
++		gpio-controller;
++		#gpio-cells = <2>;
++		reg = <0x23>;
++	};
+ 
+         gpio_xten1: gpio_xten1@27 {
+                 compatible = "nxp,pca9535";
+@@ -357,3 +366,8 @@ MX93_PAD_CCM_CLKO4__GPIO4_IO29		0x31e
+ 		>;
+ 	};
+ };
++
++/*
++	Notes:
++		Enable configs: CONFIG_RTC_DRV_PCF8563
++*/
+diff --git a/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi b/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
+index 6f38001d84e1..9b5d17ea10bb 100644
+--- a/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
++++ b/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
+@@ -122,6 +122,12 @@ codec: audio-codec@1a {
+ 		clocks = <&clk IMX93_CLK_SAI3_GATE>;
+ 		clock-names = "mclk";
+ 	};
++	
++	at24@50 {
++		compatible = "atmel,24c1024";
++		reg = <0x50>;
++		wp-gpios = <&gpio_ext_som 6 GPIO_ACTIVE_HIGH>;
++	};
+ };
+ 
+ &lpi2c2 {
+-- 
+2.34.1
+

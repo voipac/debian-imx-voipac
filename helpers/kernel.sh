@@ -12,26 +12,26 @@ source "machines/${MACHINE}/${MACHINE}.sh"
 mkdir -p ${KERNEL_PATH}
 
 # verify if we have sources available
-if [ $(ls ${KERNEL_PATH} | wc -l) = 0 ]; then
+#if [ $(ls ${KERNEL_PATH} | wc -l) = 0 ]; then
     get_git_src ${KERNEL_URL} ${KERNEL_SRCBRANCH} "$(pwd)/${KERNEL_PATH}" ${KERNEL_SRCREV}
-fi
+#fi
 
 function cmd_make_kernel()
 {
-    make_kernel "$(pwd)/machines/${MACHINE}/patches/kernel" "$(pwd)/sources/linux-fslc-imx"
+    make_kernel "$(pwd)/machines/${MACHINE}/patches/kernel" "$(pwd)/${KERNEL_PATH}"
 }
 
 function make_kernel()
 {
     # apply board specific patches
-    if [ ! -f "${KERNEL_PATH}/.applied" ]; then
+#    if [ ! -f "${KERNEL_PATH}/.applied" ]; then
         cd ${KERNEL_PATH}
         mkdir -p mbox
         cp -f ${1}/*.patch mbox
         git am -3 mbox/*
         touch .applied
         cd -
-    fi
+ #   fi
 
     cp ${1}/.config ${2}
 

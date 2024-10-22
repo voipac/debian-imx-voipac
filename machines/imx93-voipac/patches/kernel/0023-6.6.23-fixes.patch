@@ -1,0 +1,48 @@
+From 70efaf3ebc9b24c625c69f5fb5a3353211980829 Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Tue, 20 Aug 2024 14:29:38 +0200
+Subject: [PATCH] 6.6.23 fixes
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts | 2 +-
+ sound/soc/fsl/fsl-asoc-card.c                      | 3 +--
+ 2 files changed, 2 insertions(+), 3 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts b/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
+index 4bbf2e161b8f..b69a0cf923c9 100644
+--- a/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
++++ b/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
+@@ -46,7 +46,7 @@ reg_usdhc2_vmmc: regulator-usdhc2 {
+ 	};
+ 
+ 	sound-wm8904 {
+-		compatible = "fsl,imx-audio-wm8904";
++		compatible = "fsl,imx-audio-wm8904-voipac";
+ 		model = "wm8904-audio";
+ 		audio-cpu = <&sai3>;
+ 		audio-codec = <&codec>;
+diff --git a/sound/soc/fsl/fsl-asoc-card.c b/sound/soc/fsl/fsl-asoc-card.c
+index 442976e0e076..31ac731d62c5 100644
+--- a/sound/soc/fsl/fsl-asoc-card.c
++++ b/sound/soc/fsl/fsl-asoc-card.c
+@@ -55,7 +55,6 @@ enum fsl_asoc_card_type {
+ 	CARD_WM8524,
+ 	CARD_SI476X,
+ 	CARD_WM8958,
+-	CARD_WM8904,
+ };
+ 
+ /**
+@@ -868,7 +867,7 @@ static int fsl_asoc_card_probe(struct platform_device *pdev)
+ 		priv->codec_priv.pll_id = WM8960_SYSCLK_AUTO;
+ 		priv->dai_fmt |= SND_SOC_DAIFMT_CBP_CFP;
+ 		priv->card_type = CARD_WM8960;
+-	} else if (of_device_is_compatible(np, "fsl,imx-audio-wm8904")) {
++	} else if (of_device_is_compatible(np, "fsl,imx-audio-wm8904-voipac")) {
+ 		codec_dai_name = "wm8904-hifi";
+ 		priv->card.set_bias_level = NULL;
+ 		priv->codec_priv.mclk_id = WM8904_CLK_FLL;
+-- 
+2.34.1
+

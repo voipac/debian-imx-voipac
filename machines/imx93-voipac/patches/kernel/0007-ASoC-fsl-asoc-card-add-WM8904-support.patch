@@ -1,0 +1,91 @@
+From 9f4be99926a29b8b5fbc06c60a5b671cb5d530ab Mon Sep 17 00:00:00 2001
+From: Pierluigi Passaro <pierluigi.p@variscite.com>
+Date: Sat, 31 Aug 2019 01:06:32 +0200
+Subject: [PATCH] ASoC: fsl-asoc-card: add WM8904 support
+
+The codec WM8904 can use internal FLL as PLL source.
+Whenever the PLL source is not an external MCLK, this source must be setup
+during hw_params callback otherwise the BCLK could be wrongly evaluated.
+The SND_SOC_BIAS_PREPARE event is raised after the hw_params callback,
+so there is no need to set again PLL and SYSCLK and actually there's no
+need at all the set_bias_level function.
+Also, when esai is used, a dedicated snd_soc_dai_set_tdm_slot call is required.
+---
+ sound/soc/fsl/fsl-asoc-card.c | 47 +++++++++++++++++++++++++++++++++++
+ 1 file changed, 47 insertions(+)
+
+diff --git a/sound/soc/fsl/fsl-asoc-card.c b/sound/soc/fsl/fsl-asoc-card.c
+index ca67816b5aa1..a2f214a68c17 100644
+--- a/sound/soc/fsl/fsl-asoc-card.c
++++ b/sound/soc/fsl/fsl-asoc-card.c
+@@ -27,6 +27,7 @@
+ #include "../codecs/wm8962.h"
+ #include "../codecs/wm8960.h"
+ #include "../codecs/wm8994.h"
++#include "../codecs/wm8904.h"
+ #include "../codecs/tlv320aic31xx.h"
+ #include "../codecs/nau8822.h"
+ #include "../codecs/wm8904.h"
+@@ -315,6 +316,39 @@ static int fsl_asoc_card_hw_params(struct snd_pcm_substream *substream,
+ 		}
+ 	}
+ 
++	if (of_device_is_compatible(dev->of_node, "fsl,imx-audio-wm8904")) {
++		struct snd_soc_dai *codec_dai = rtd->codec_dai;
++		struct codec_priv *codec_priv = &priv->codec_priv;
++		unsigned int pll_out;
++
++		ret = snd_soc_dai_set_tdm_slot(rtd->cpu_dai, 0, 0, 2,
++					       params_physical_width(params));
++		if (ret) {
++			dev_err(dev, "failed to set TDM slot for cpu dai\n");
++			return ret;
++		}
++
++		if (priv->sample_format == SNDRV_PCM_FORMAT_S24_LE)
++			pll_out = priv->sample_rate * 384;
++		else
++			pll_out = priv->sample_rate * 256;
++
++		ret = snd_soc_dai_set_pll(codec_dai, codec_priv->pll_id,
++					  codec_priv->pll_id,
++					  codec_priv->mclk_freq, pll_out);
++		if (ret) {
++			dev_err(dev, "failed to start FLL: %d\n", ret);
++			return ret;
++		}
++
++		ret = snd_soc_dai_set_sysclk(codec_dai, codec_priv->fll_id,
++					     pll_out, SND_SOC_CLOCK_IN);
++		if (ret) {
++			dev_err(dev, "failed to set SYSCLK: %d\n", ret);
++			return ret;
++		}
++	}
++
+ 	return 0;
+ 
+ fail:
+@@ -832,6 +866,19 @@ static int fsl_asoc_card_probe(struct platform_device *pdev)
+ 		priv->codec_priv.pll_id = WM8960_SYSCLK_AUTO;
+ 		priv->dai_fmt |= SND_SOC_DAIFMT_CBP_CFP;
+ 		priv->card_type = CARD_WM8960;
++	} else if (of_device_is_compatible(np, "fsl,imx-audio-wm8904")) {
++		codec_dai_name = "wm8904-hifi";
++		priv->card.set_bias_level = NULL;
++		priv->codec_priv.mclk_id = WM8904_CLK_FLL;
++		priv->codec_priv.fll_id = WM8904_CLK_FLL;
++		priv->codec_priv.pll_id = WM8904_FLL_MCLK;
++		priv->dai_fmt |= SND_SOC_DAIFMT_CBM_CFM;
++		if (strstr(cpu_np->name, "esai")) {
++			priv->cpu_priv.sysclk_freq[TX] = priv->codec_priv.mclk_freq;
++			priv->cpu_priv.sysclk_freq[RX] = priv->codec_priv.mclk_freq;
++			priv->cpu_priv.sysclk_dir[TX] = SND_SOC_CLOCK_OUT;
++			priv->cpu_priv.sysclk_dir[RX] = SND_SOC_CLOCK_OUT;
++		}
+ 	} else if (of_device_is_compatible(np, "fsl,imx-audio-ac97")) {
+ 		codec_dai_name = "ac97-hifi";
+ 		priv->dai_fmt = SND_SOC_DAIFMT_AC97;
+-- 
+2.34.1
+
