@@ -6,7 +6,10 @@
 
 source docker/docker_info.sh
 
-DOCKER_ARGS="-it -v "`pwd`:/opt" -w /opt --privileged=true -v /dev:/dev -e "MACHINE=${MACHINE}" ${REPO}:${TAG} "
+USE_TTY=""
+test -t 1 && USE_TTY="-it"
+
+DOCKER_ARGS="${USE_TTY} -v "`pwd`:/opt" -w /opt --privileged=true -v /dev:/dev -e "MACHINE=${MACHINE}" ${REPO}:${TAG} "
 
 if ! docker image inspect ${REPO}:${TAG}  2>&1 > /dev/null; then
 	echo "Build container not found, building one"

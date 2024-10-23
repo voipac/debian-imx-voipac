@@ -6,9 +6,9 @@
 
 set -e
 
-source docker_info.sh
+source docker/docker_info.sh
 
 echo "Building docker image ${REPO} - tag: ${TAG}"
 
 docker build \
-       -t $REPO:$TAG .
+	-t $REPO:$TAG docker/
