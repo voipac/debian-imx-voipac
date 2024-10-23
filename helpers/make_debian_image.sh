@@ -23,7 +23,7 @@ function cmd_make_rootfs()
 			chmod 0440 ${ROOTFS_PATH}/etc/sudoers.d/user
 	fi
 	# copy update script
-	cp helpers/update_ubuntu_image.sh ${ROOTFS_PATH}/
+	cp helpers/update_ubuntu_image_${PLAT}.sh ${ROOTFS_PATH}/update_ubuntu_image.sh
 
 	# copy qemu binary
 	cp /usr/bin/qemu-aarch64-static ${ROOTFS_PATH}/usr/bin/qemu-aarch64-static

@@ -28,6 +28,9 @@ function cmd_make_sdimg()
 
     # copy bootloader and dd it to final image
     copy_bootloader "/tmp"
+    # copy it to root of project also
+    copy_bootloader "$(pwd)"
+
 
     dd if=/tmp/flash.bin of=${loopback} bs=1K seek=${IMX_BOOT_OFFSET}
 

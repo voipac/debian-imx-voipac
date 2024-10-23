@@ -4,14 +4,15 @@
 # Author: Marek Belisko <marek.belisko@voipac.com>
 #
 
-readonly DEB_RELEASE="bullseye"
+set -x
+
 PARAM_CMD="all"
 
 SCRIPT_NAME=${0##*/}
 
 function usage()
 {
-    echo "Make Debian ${DEB_RELEASE} image and create a bootabled SD card"
+    echo "Make Debian image and create a bootabled SD card"
     echo
     echo "Usage:"
     echo " MACHINE=imx8mq-voipac|imx93-voipac ./${SCRIPT_NAME} options"
