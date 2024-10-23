@@ -4,6 +4,6 @@
 # Author: Marek Belisko <marek.belisko@voipac.com>
 #
 
-TAG="0.1"
+TAG="0.0.1"
 REPO="ubuntu"
 
