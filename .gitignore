@@ -1,5 +1,4 @@
 sources
-tools
 debian-rootfs
 image.sdimg
 flash.bin
