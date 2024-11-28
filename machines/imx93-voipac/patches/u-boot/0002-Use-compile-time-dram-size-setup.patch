@@ -1,0 +1,99 @@
+From 604a779dea3d4a76c4572dd1318d80daebd2c8b5 Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Tue, 12 Nov 2024 15:40:04 +0100
+Subject: [PATCH] Use compile time dram size setup
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ board/voipac/imx93_voipac_evk/Kconfig     | 12 ++++++++
+ board/voipac/imx93_voipac_evk/imx93_evk.c | 35 +++++++++++------------
+ board/voipac/imx93_voipac_evk/spl.c       |  4 +--
+ 3 files changed, 31 insertions(+), 20 deletions(-)
+
+diff --git a/board/voipac/imx93_voipac_evk/Kconfig b/board/voipac/imx93_voipac_evk/Kconfig
+index 7185dbf7690..9dd4fea2475 100644
+--- a/board/voipac/imx93_voipac_evk/Kconfig
++++ b/board/voipac/imx93_voipac_evk/Kconfig
+@@ -15,5 +15,17 @@ config IMX93_EVK_LPDDR4X
+ 	select IMX9_LPDDR4X
+ 	help
+ 	  Select the LPDDR4X timing and 0.6V VDDQ
++choice
++	prompt "DRAM size selection"
++
++config DRAM_SIZE_512M
++	bool "DRAM size 512"
++
++config DRAM_SIZE_1G
++	bool "DRAM size 1G"
++
++config DRAM_SIZE_2G
++	bool "DRAM size 2G"
++endchoice
+ 
+ endif
+diff --git a/board/voipac/imx93_voipac_evk/imx93_evk.c b/board/voipac/imx93_voipac_evk/imx93_evk.c
+index f4bad4e01c1..e12502fd690 100644
+--- a/board/voipac/imx93_voipac_evk/imx93_evk.c
++++ b/board/voipac/imx93_voipac_evk/imx93_evk.c
+@@ -261,24 +261,23 @@ int board_phy_config(struct phy_device *phydev)
+ 
+ int board_phys_sdram_size(phys_size_t *size)
+ {
+-       int board = 0;
+-       if (!size)
+-               return -EINVAL;
+-
+-       board = readl(OCRAM_BASE_ADDR);
+-       switch(board) {
+-               case 3:
+-                       *size = SZ_512M;
+-                       break;
+-               case 5:
+-                       *size = SZ_1G;
+-                       break;
+-               case 7:
+-                       *size = SZ_2G;
+-                       break;
+-               default:
+-                       *size = SZ_1G;
+-        }
++#ifdef CONFIG_DRAM_SIZE_2G
++	*size = SZ_2G;
++	return 0;
++#endif /* CONFIG_DRAM_SIZE_2G */
++
++#ifdef CONFIG_DRAM_SIZE_1G
++	*size = SZ_1G;
++	return 0;
++#endif /* CONFIG_DRAM_SIZE_1G */
++
++#ifdef CONFIG_DRAM_SIZE_512M
++	*size = SZ_512M;
++	return 0;
++#endif /* CONFIG_DRAM_SIZE_512M */
++
++	printf("Unknown DRAM size, using 512M as default\n");
++	*size = SZ_512M;
+ 
+        return 0;
+  }
+diff --git a/board/voipac/imx93_voipac_evk/spl.c b/board/voipac/imx93_voipac_evk/spl.c
+index 1c2cdeac087..d55401398ac 100644
+--- a/board/voipac/imx93_voipac_evk/spl.c
++++ b/board/voipac/imx93_voipac_evk/spl.c
+@@ -272,9 +272,9 @@ void board_init_f(ulong dummy)
+ 
+ 	power_init_board();
+ 
+-	ret = board_detect();
++//	ret = board_detect();
+ 
+-	printf("Board version: %d\n", ret);
++//	printf("Board version: %d\n", ret);
+ 
+ 	if (!is_voltage_mode(VOLT_LOW_DRIVE))
+ 		set_arm_core_max_clk();
+-- 
+2.34.1
+
