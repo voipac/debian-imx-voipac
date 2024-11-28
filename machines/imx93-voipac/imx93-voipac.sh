@@ -49,3 +49,6 @@ DEBIAN_RELEASE="bookworm"
 
 # imx-boot offset
 IMX_BOOT_OFFSET=32
+
+# setup for pro and max
+MEMORY_SIZE="2G"

@@ -4,7 +4,7 @@
 # Author: Marek Belisko <marek.belisko@voipac.com>
 #
 
-set -ex
+set -x
 
 source helpers/sources.sh
 #source helpers/toolchain.sh
@@ -82,7 +82,8 @@ function make_uboot()
 	BINARY=$(basename "${FIRMWARE_SENTINEL}")
         get_remote_file ${FIRMWARE_SENTINEL} ${FIRMWARE_SENTINEL_PATH}/${BINARY}
 	cd ${FIRMWARE_SENTINEL_PATH}
-	chmod +x ${BINARY} && ./${BINARY}
+	chmod +x ${BINARY} && ./${BINARY} --auto-accept --force
+	echo "Done"
 	cp $(basename ${BINARY} .bin)/mx93a1-ahab-container.img "../../${IMX_MKIMAGE_PATH}/iMX93"
 	cd -
     fi
@@ -96,6 +97,18 @@ function make_uboot()
 
 	# make U-Boot mmc defconfig
 	make -C ${2} ${G_UBOOT_DEF_CONFIG_MMC}
+
+	# adjust .config with proper memory size
+	case $MEMORY_SIZE in
+		"2G")
+			echo "Memory size is 2G"
+			sed -i 's?CONFIG_DRAM_SIZE_512M=y?CONFIG_DRAM_SIZE_2G=y?g' ${2}/.config;;
+
+		"1G")
+			echo "Memory size is 1G"
+			sed -i 's?CONFIG_DRAM_SIZE_512M=y?CONFIG_DRAM_SIZE_1G=y?g' ${2}/.config;;
+	esac
+
 
 	# make U-Boot
 	make -j$(nproc)  -C ${2} \
