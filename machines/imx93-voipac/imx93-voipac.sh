@@ -23,7 +23,7 @@ FIRMWARE_BINARY="firmware-imx-8.18.bin"
 FIRMWARE_IMX="https://www.nxp.com/lgfiles/NMG/MAD/YOCTO/${FIRMWARE_BINARY}"
 FIRMWARE_PATH="sources/firmware-imx"
 
-FIRMWARE_SENTINEL="https://www.nxp.com/lgfiles/NMG/MAD/YOCTO/firmware-sentinel-0.11.bin"
+FIRMWARE_SENTINEL="https://www.nxp.com/lgfiles/NMG/MAD/YOCTO/firmware-ele-imx-0.1.1.bin"
 FIRMWARE_SENTINEL_PATH="sources/firmware-sentinel"
 
 # mkimage
