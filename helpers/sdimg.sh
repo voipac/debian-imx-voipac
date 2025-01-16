@@ -58,6 +58,23 @@ function cmd_make_sdimg()
     mkdir -p /mnt/root/lib/modules
     cp -r ${KERNEL_PATH}/modules/lib /mnt/root/usr
     ls -la /mnt/root/usr/lib/modules
+
+    # copy out of tree modules + firmware
+    if [ ${PLAT} = "imx93" ]; then
+
+	source helpers/imx93/build_nxp_wlan_modules.sh
+        local MODULES_VERSION=$(ls /mnt/root/usr/lib/modules/)
+	local MODULES_PATH="/mnt/root/usr/lib/modules/${MODULES_VERSION}/kernel/extra"
+	mkdir -p "${MODULES_PATH}"
+	cp $(pwd)/${MODULE_PATH}/mxm_wifiex/wlan_src/result/*.ko "${MODULES_PATH}"
+
+	# copy imx-firmware
+	FW_PATH="/mnt/root/usr/lib/firmware/nxp"
+	mkdir -p "${FW_PATH}"
+	cp -r $(pwd)/${NXP_FIRMWARE_PATH}/nxp/FwImage_IW416_SD/* "${FW_PATH}"
+	cp $(pwd)/${NXP_FIRMWARE_PATH}/nxp/wifi_mod_para.conf "${FW_PATH}"
+    fi
+
     
     umount /mnt/*
     losetup -d ${loopback}

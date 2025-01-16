@@ -24,6 +24,7 @@ function usage()
     echo "       all         -- build or rebuild kernel/bootloader/rootfs"
     echo "       bootloader  -- build or rebuild U-Boot"
     echo "       kernel      -- build or rebuild the Linux kernel"
+    echo "       mwifiex     -- build mwifiex kernel module"
     echo "       rootfs      -- build or rebuild the Debian root filesystem and create rootfs.tar.gz"
     echo "                       (including: make & install Debian packages, firmware and kernel modules & headers)"
     echo
@@ -82,6 +83,9 @@ case $PARAM_CMD in
                 ;;
         kernel )
                 cmd_make_kernel
+		;;
+	mwifiex )
+		cmd_make_mwifiex
                 ;;
         all )
                 cmd_make_uboot  &&

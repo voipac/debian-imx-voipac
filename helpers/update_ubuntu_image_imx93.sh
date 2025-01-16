@@ -32,3 +32,14 @@ PASSWD="voipac"
 # added user
 useradd  -m ${USERNAME}
 echo "${USERNAME}:${PASSWD}" | chpasswd
+
+
+# depmod run during startup
+cat <<EOF > /etc/rc.local
+#!/bin/bash
+depmod -a
+EOF
+
+chmod +x /etc/rc.local
+
+
