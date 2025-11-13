@@ -1,0 +1,894 @@
+From eb34d17a0b5bd97d0b18de5f040d7124c66aad2b Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Tue, 14 Jan 2025 10:59:10 +0100
+Subject: [PATCH] Added support for imx91 board
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ arch/arm64/boot/dts/freescale/Makefile        |   3 +-
+ .../boot/dts/freescale/imx91-voipac-evk.dts   | 389 ++++++++++++++++
+ .../boot/dts/freescale/imx91-voipac-som.dtsi  | 431 ++++++++++++++++++
+ .../boot/dts/freescale/imx93-voipac-som.dtsi  |   5 +
+ .../boot/dts/freescale/imx9x-voipac-som.dtsi  |   2 -
+ 5 files changed, 827 insertions(+), 3 deletions(-)
+ create mode 100644 arch/arm64/boot/dts/freescale/imx91-voipac-evk.dts
+ create mode 100644 arch/arm64/boot/dts/freescale/imx91-voipac-som.dtsi
+
+diff --git a/arch/arm64/boot/dts/freescale/Makefile b/arch/arm64/boot/dts/freescale/Makefile
+index 03c44ba075c2..edf4aab4d8af 100644
+--- a/arch/arm64/boot/dts/freescale/Makefile
++++ b/arch/arm64/boot/dts/freescale/Makefile
+@@ -398,7 +398,8 @@ dtb-$(CONFIG_ARCH_MXC) += imx91-11x11-evk.dtb \
+ 			  imx91-11x11-evk-mt9m114.dtb \
+ 			  imx91-11x11-evk-ld.dtb \
+ 			  imx91-11x11-evk-i2c-spi-slave.dtb \
+-			  imx91-11x11-evk-i3c.dtb
++			  imx91-11x11-evk-i3c.dtb \
++			  imx91-voipac-evk.dtb
+ 
+ imx93-11x11-evk-pmic-pf0900-dtbs := imx93-11x11-evk.dtb imx93-11x11-evk-pmic-pf0900.dtbo
+ imx93-11x11-evk-pmic-pf0900-root-dtbs := imx93-11x11-evk-root.dtb imx93-11x11-evk-pmic-pf0900.dtbo
+diff --git a/arch/arm64/boot/dts/freescale/imx91-voipac-evk.dts b/arch/arm64/boot/dts/freescale/imx91-voipac-evk.dts
+new file mode 100644
+index 000000000000..c6d6266a79fd
+--- /dev/null
++++ b/arch/arm64/boot/dts/freescale/imx91-voipac-evk.dts
+@@ -0,0 +1,389 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Copyright 2024 Voipac
++ */
++
++/dts-v1/;
++
++#include "imx91.dtsi"
++#include "imx91-voipac-som.dtsi"
++#include "imx9x-voipac-som.dtsi"
++
++/ {
++	model = "i.MX91 Voipac EVK board";
++	compatible = "fsl,imx91-voipac-evk", "fsl,imx91";
++
++
++	reg_vref_1v8: regulator-adc-vref {
++		compatible = "regulator-fixed";
++		regulator-name = "vref_1v8";
++		regulator-min-microvolt = <1800000>;
++		regulator-max-microvolt = <1800000>;
++	};
++
++	csi2_reg: regulator-csi-1v8 {
++               compatible = "regulator-fixed";
++               regulator-name = "csi2_pwup";
++               regulator-min-microvolt = <1800000>;
++               regulator-max-microvolt = <1800000>;
++               gpio = <&gpio_xten1 5 GPIO_ACTIVE_HIGH>;
++               enable-active-high;
++       };
++
++
++	reg_usdhc2_vmmc: regulator-usdhc2 {
++		compatible = "regulator-fixed";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_reg_usdhc2_vmmc>;
++		regulator-name = "VSD_3V3";
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		gpio = <&gpio3 7 GPIO_ACTIVE_HIGH>;
++		off-on-delay-us = <12000>;
++		enable-active-high;
++	};
++
++	sound-wm8904 {
++		compatible = "fsl,imx-audio-wm8904";
++		model = "wm8904-audio";
++		audio-cpu = <&sai3>;
++		audio-codec = <&codec>;
++		audio-routing =
++                       "Headphone Jack", "HPOUTL",
++                       "Headphone Jack", "HPOUTR",
++                       "IN2L", "Line In Jack",
++                       "IN2R", "Line In Jack",
++                       "IN1L", "Mic Jack",
++                       "Playback", "CPU-Playback";
++
++		};
++
++	gpio-leds {
++		compatible = "gpio-leds";
++
++		user-led-sbc {
++			label = "user_sbc";
++			gpios = <&gpio_xten1 2 GPIO_ACTIVE_HIGH>;
++			default-state = "keep";
++		};
++	};
++
++	gpio-buttons { 
++               compatible = "gpio-keys"; 
++               pinctrl-names = "default"; 
++               pinctrl-0 = <&pinctrl_buttons>; 
++ 
++               button-up { 
++                       label = "Up"; 
++                       linux,code = <KEY_UP>; 
++                       gpios = <&gpio3 26 GPIO_ACTIVE_LOW>;
++			wakeup-source;
++			debounce-interval = <20>;
++                  	interrupt-parent = <&gpio3>;
++	                interrupts = <26 IRQ_TYPE_LEVEL_LOW>;
++               }; 
++ 
++               button-down { 
++                       label = "Down"; 
++                       linux,code = <KEY_DOWN>; 
++                       gpios = <&gpio3 27 GPIO_ACTIVE_LOW>; 
++               }; 
++ 
++               button-left { 
++                       label = "Left"; 
++                       linux,code = <KEY_LEFT>; 
++                       gpios = <&gpio4 28 GPIO_ACTIVE_LOW>; 
++               }; 
++ 
++               button-right { 
++                       label = "Right"; 
++                       linux,code = <KEY_RIGHT>; 
++                       gpios = <&gpio4 29 GPIO_ACTIVE_LOW>; 
++               }; 
++ 
++               button-enter { 
++                       label = "Enter"; 
++                       linux,code = <KEY_ENTER>; 
++                       gpios = <&gpio_ext_som 7 GPIO_ACTIVE_LOW>; 
++               };
++       };
++
++	robot_backlight: robot_backlight {
++                compatible = "pwm-backlight";
++                pwms = <&tpm3 3 5000000 0>;
++                brightness-levels = <0 100>;
++                num-interpolated-steps = <100>;
++                default-brightness-level = <80>;
++                status = "okay";
++        };
++};
++
++&sai1 {
++	#sound-dai-cells = <0>;
++	pinctrl-names = "default", "sleep";
++	pinctrl-0 = <&pinctrl_sai1>;
++	pinctrl-1 = <&pinctrl_sai1_sleep>;
++	assigned-clocks = <&clk IMX91_CLK_SAI1>;
++	assigned-clock-parents = <&clk IMX91_CLK_AUDIO_PLL>;
++	assigned-clock-rates = <12288000>;
++	fsl,sai-mclk-direction-output;
++	status = "okay";
++};
++
++&sai3 {
++	pinctrl-names = "default", "sleep";
++	pinctrl-0 = <&pinctrl_sai3>;
++	pinctrl-1 = <&pinctrl_sai3_sleep>;
++	assigned-clocks = <&clk IMX91_CLK_SAI3>;
++	assigned-clock-parents = <&clk IMX91_CLK_AUDIO_PLL>;
++	assigned-clock-rates = <12288000>;
++	fsl,sai-mclk-direction-output;
++	status = "okay";
++};
++	
++&adc1 {
++	vref-supply = <&reg_vref_1v8>;
++	status = "okay";
++};
++
++
++&mu1 {
++	status = "okay";
++};
++
++&mu2 {
++	status = "okay";
++};
++
++&lcdif {
++	status = "okay";
++	assigned-clock-rates = <445333333>, <148444444>, <400000000>, <133333333>;
++};
++
++&lpm {
++	soc-supply = <&buck1>;
++	status = "okay";
++};
++
++&lpi2c3 {
++	#address-cells = <1>;
++	#size-cells = <0>;
++	clock-frequency = <400000>;
++	pinctrl-names = "default", "sleep";
++	pinctrl-0 = <&pinctrl_lpi2c3>;
++	pinctrl-1 = <&pinctrl_lpi2c3>;
++	status = "okay";
++
++	ptn5110: tcpc@50 {
++		compatible = "nxp,ptn5110";
++		reg = <0x50>;
++		interrupt-parent = <&gpio3>;
++		interrupts = <27 IRQ_TYPE_LEVEL_LOW>;
++		status = "okay";
++
++		port {
++			typec1_dr_sw: endpoint {
++				remote-endpoint = <&usb1_drd_sw>;
++			};
++		};
++
++		typec1_con: connector {
++			compatible = "usb-c-connector";
++			label = "USB-C";
++			power-role = "dual";
++			data-role = "dual";
++			try-power-role = "sink";
++			source-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
++			sink-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)
++				     PDO_VAR(5000, 20000, 3000)>;
++			op-sink-microwatt = <15000000>;
++			self-powered;
++		};
++	};
++
++	ptn5110_2: tcpc@51 {
++		compatible = "nxp,ptn5110";
++		reg = <0x51>;
++		interrupt-parent = <&gpio3>;
++		interrupts = <27 IRQ_TYPE_LEVEL_LOW>;
++		status = "okay";
++
++		port {
++			/*typec2_dr_sw: endpoint {
++				remote-endpoint = <&usb2_drd_sw>;
++			};*/
++		};
++
++		typec2_con: connector {
++			compatible = "usb-c-connector";
++			label = "USB-C";
++			power-role = "dual";
++			data-role = "dual";
++			try-power-role = "sink";
++			source-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
++			sink-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)
++				     PDO_VAR(5000, 20000, 3000)>;
++			op-sink-microwatt = <15000000>;
++			self-powered;
++		};
++	};
++
++};
++
++&lpuart1 { /* console */
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_uart1>;
++	status = "okay";
++};
++
++&lpuart2 { 
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_uart2>;
++	status = "okay";
++};
++
++&lpuart6 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_uart6>;
++	status = "okay";
++};
++
++&lpuart8 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_uart8>;
++	status = "okay";
++};
++
++&media_blk_ctrl {
++	status = "okay";
++};
++
++&usbotg1 {
++	dr_mode = "otg";
++	hnp-disable;
++	srp-disable;
++	adp-disable;
++	usb-role-switch;
++	disable-over-current;
++	samsung,picophy-pre-emp-curr-control = <3>;
++	samsung,picophy-dc-vol-level-adjust = <7>;
++	status = "okay";
++
++	port {
++		usb1_drd_sw: endpoint {
++			remote-endpoint = <&typec1_dr_sw>;
++		};
++	};
++};
++
++&usbotg2 {
++	dr_mode = "host";
++	hnp-disable;
++	srp-disable;
++	adp-disable;
++	usb-role-switch;
++	disable-over-current;
++	samsung,picophy-pre-emp-curr-control = <3>;
++	samsung,picophy-dc-vol-level-adjust = <7>;
++	status = "okay";
++};
++
++
++&wdog3 {
++	status = "okay";
++};
++
++&cameradev {
++	status = "okay";
++};
++
++&isi_0 {
++	status = "okay";
++
++	cap_device {
++		status = "okay";
++	};
++};
++
++
++&lpi2c2 {
++	eeprom@53{
++		compatible = "atmel,24c02";
++		reg = <0x53>;
++		pagesize = <0x8>;
++	};
++
++	pcf8563: rtc@51 {
++		compatible = "nxp,pcf8563";
++		pinctrl-names = "default";
++		reg = <0x51>;
++		interrupt-parent = <&gpio_ext_som>;
++		interrupts = <4 IRQ_TYPE_LEVEL_LOW>;
++		#clock-cells = <0>;
++	};
++
++	gpio_xten0: gpio_xten0@23 {
++		compatible = "nxp,pca9535";
++		gpio-controller;
++		#gpio-cells = <2>;
++		reg = <0x23>;
++	};
++
++        gpio_xten1: gpio_xten1@27 {
++                compatible = "nxp,pca9535";
++                gpio-controller;
++                #gpio-cells = <2>;
++                reg = <0x27>;
++        };
++
++};
++
++&cameradev {
++	status = "okay";
++};
++
++&isi_0 {
++	status = "okay";
++
++	cap_device {
++		status = "okay";
++	};
++};
++
++&iomuxc {
++
++	pinctrl_buttons: buttons {
++		fsl,pins = <
++			MX91_PAD_CCM_CLKO1__GPIO3_IO26          0x31e
++			MX91_PAD_CCM_CLKO2__GPIO3_IO27          0x31e
++			MX91_PAD_CCM_CLKO3__GPIO4_IO28		0x31e
++			MX91_PAD_CCM_CLKO4__GPIO4_IO29		0x31e
++		>;
++	};
++};
++
++/*
++	Notes:
++		Enable configs: CONFIG_RTC_DRV_PCF8563
++*/
++
++&tpm3 {
++	status = "okay";
++	pinctrl-names = "default";
++	pinctrl-0 = <&robot_pwm>;
++
++};
++
++&iomuxc {
++
++	robot_pwm: robot_pwm {
++		fsl,pins = <
++			MX91_PAD_GPIO_IO24__TPM3_CH3               0x0000051E
++		>;
++	};
++};
++
++&ele_fw2 {
++       memory-region = <&ele_reserved>;
++};
++
+diff --git a/arch/arm64/boot/dts/freescale/imx91-voipac-som.dtsi b/arch/arm64/boot/dts/freescale/imx91-voipac-som.dtsi
+new file mode 100644
+index 000000000000..c6dc2d73b0c8
+--- /dev/null
++++ b/arch/arm64/boot/dts/freescale/imx91-voipac-som.dtsi
+@@ -0,0 +1,431 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Copyright 2024 Voipac
++ */
++
++#include <dt-bindings/usb/pd.h>
++#include "imx9x-voipac-som.dtsi"
++
++/ {
++	model = "i.MX91 Voipac SOM board";
++	compatible = "fsl,imx91-voipac-som", "fsl,imx91";
++};
++
++&codec {
++	clocks = <&clk IMX91_CLK_SAI3_GATE>;
++};
++
++&gpio_ext_som {
++        interrupt-parent = <&gpio2>;
++		interrupts = <22 IRQ_TYPE_LEVEL_LOW>;
++};
++
++&iomuxc {
++	pinctrl_eqos: eqosgrp {
++		fsl,pins = <
++			MX91_PAD_ENET1_MDC__ENET1_MDC			0x57e
++			MX91_PAD_ENET1_MDIO__ENET_QOS_MDIO			0x57e
++			MX91_PAD_ENET1_RD0__ENET_QOS_RGMII_RD0			0x57e
++			MX91_PAD_ENET1_RD1__ENET_QOS_RGMII_RD1			0x57e
++			MX91_PAD_ENET1_RD2__ENET_QOS_RGMII_RD2			0x57e
++			MX91_PAD_ENET1_RD3__ENET_QOS_RGMII_RD3			0x57e
++			MX91_PAD_ENET1_RXC__ENET_QOS_RGMII_RXC	0x5fe
++			MX91_PAD_ENET1_RX_CTL__ENET_QOS_RGMII_RX_CTL		0x57e
++			MX91_PAD_ENET1_TD0__ENET_QOS_RGMII_TD0			0x57e
++			MX91_PAD_ENET1_TD1__ENET1_RGMII_TD1			0x57e
++			MX91_PAD_ENET1_TD2__ENET_QOS_RGMII_TD2			0x57e
++			MX91_PAD_ENET1_TD3__ENET_QOS_RGMII_TD3			0x57e
++			MX91_PAD_ENET1_TXC__CCM_ENET_QOS_CLOCK_GENERATE_TX_CLK	0x5fe
++			MX91_PAD_ENET1_TX_CTL__ENET_QOS_RGMII_TX_CTL		0x57e
++		>;
++	};
++
++	pinctrl_eqos_sleep: eqosgrpsleep {
++		fsl,pins = <
++			MX91_PAD_ENET1_MDC__GPIO4_IO0				0x31e
++			MX91_PAD_ENET1_MDIO__GPIO4_IO1				0x31e
++			MX91_PAD_ENET1_RD0__GPIO4_IO10                          0x31e
++			MX91_PAD_ENET1_RD1__GPIO4_IO11				0x31e
++			MX91_PAD_ENET1_RD2__GPIO4_IO12				0x31e
++			MX91_PAD_ENET1_RD3__GPIO4_IO13				0x31e
++			MX91_PAD_ENET1_RXC__GPIO4_IO9                          0x31e
++			MX91_PAD_ENET1_RX_CTL__GPIO4_IO8			0x31e
++			MX91_PAD_ENET1_TD0__GPIO4_IO5                          0x31e
++			MX91_PAD_ENET1_TD1__GPIO4_IO4                          0x31e
++			MX91_PAD_ENET1_TD2__GPIO4_IO3				0x31e
++			MX91_PAD_ENET1_TD3__GPIO4_IO3				0x31e
++			MX91_PAD_ENET1_TXC__GPIO4_IO7                          0x31e
++			MX91_PAD_ENET1_TX_CTL__GPIO4_IO6                       0x31e
++		>;
++	};
++
++	pinctrl_fec: fecgrp {
++		fsl,pins = <
++			MX91_PAD_ENET2_MDC__ENET2_MDC			0x57e
++			MX91_PAD_ENET2_MDIO__ENET2_MDIO			0x57e
++			MX91_PAD_ENET2_RD0__ENET2_RGMII_RD0		0x57e
++			MX91_PAD_ENET2_RD1__ENET2_RGMII_RD1		0x57e
++			MX91_PAD_ENET2_RD2__ENET2_RGMII_RD2		0x57e
++			MX91_PAD_ENET2_RD3__ENET2_RGMII_RD3		0x57e
++			MX91_PAD_ENET2_RXC__ENET2_RGMII_RXC		0x5fe
++			MX91_PAD_ENET2_RX_CTL__ENET2_RGMII_RX_CTL	0x57e
++			MX91_PAD_ENET2_TD0__ENET2_RGMII_TD0		0x57e
++			MX91_PAD_ENET2_TD1__ENET2_RGMII_TD1		0x57e
++			MX91_PAD_ENET2_TD2__ENET2_RGMII_TD2		0x57e
++			MX91_PAD_ENET2_TD3__ENET2_RGMII_TD3		0x57e
++			MX91_PAD_ENET2_TXC__ENET2_RGMII_TXC		0x5fe
++			MX91_PAD_ENET2_TX_CTL__ENET2_RGMII_TX_CTL	0x57e
++		>;
++	};
++
++	pinctrl_fec_sleep: fecsleepgrp {
++		fsl,pins = <
++			MX91_PAD_ENET2_MDC__GPIO4_IO14			0x51e
++			MX91_PAD_ENET2_MDIO__GPIO4_IO15			0x51e
++			MX91_PAD_ENET2_RD0__GPIO4_IO24			0x51e
++			MX91_PAD_ENET2_RD1__GPIO4_IO25			0x51e
++			MX91_PAD_ENET2_RD2__GPIO4_IO26			0x51e
++			MX91_PAD_ENET2_RD3__GPIO4_IO27			0x51e
++			MX91_PAD_ENET2_RXC__GPIO4_IO23                  0x51e
++			MX91_PAD_ENET2_RX_CTL__GPIO4_IO22		0x51e
++			MX91_PAD_ENET2_TD0__GPIO4_IO19			0x51e
++			MX91_PAD_ENET2_TD1__GPIO4_IO18			0x51e
++			MX91_PAD_ENET2_TD2__GPIO4_IO17			0x51e
++			MX91_PAD_ENET2_TD3__GPIO4_IO16			0x51e
++			MX91_PAD_ENET2_TXC__GPIO4_IO21                  0x51e
++			MX91_PAD_ENET2_TX_CTL__GPIO4_IO20               0x51e
++		>;
++	};
++	
++	pinctrl_flexcan1: flexcan1grp {
++		fsl,pins = <
++			MX91_PAD_PDM_BIT_STREAM0__CAN1_RX          0x139e
++		        MX91_PAD_PDM_CLK__CAN1_TX                  0x1939e
++		>;
++	};
++	pinctrl_flexcan1_sleep: flexcan1sleepgrp {
++		fsl,pins = <
++		        MX91_PAD_GPIO_IO28__CAN1_TX                0x31e
++	                MX91_PAD_GPIO_IO29__CAN1_RX                0x31e
++		>;
++	};
++
++	pinctrl_flexcan2: flexcan2grp {
++		fsl,pins = <
++			MX91_PAD_GPIO_IO25__CAN2_TX	0x139e
++			MX91_PAD_GPIO_IO27__CAN2_RX	0x139e
++		>;
++	};
++	pinctrl_flexcan2_sleep: flexcan2sleepgrp {
++		fsl,pins = <
++			MX91_PAD_GPIO_IO25__GPIO2_IO25  0x31e
++			MX91_PAD_GPIO_IO27__GPIO2_IO27	0x31e
++		>;
++	};
++
++	pinctrl_lpi2c1: lpi2c1grp {
++		fsl,pins = <
++			MX91_PAD_I2C1_SCL__LPI2C1_SCL			0x40000b9e
++			MX91_PAD_I2C1_SDA__LPI2C1_SDA			0x40000b9e
++		>;
++	};
++
++	pinctrl_lpi2c2: lpi2c2grp {
++		fsl,pins = <
++			MX91_PAD_I2C2_SCL__LPI2C2_SCL			0x40000b9e
++			MX91_PAD_I2C2_SDA__LPI2C2_SDA			0x40000b9e
++		>;
++	};
++
++	pinctrl_lpi2c3: lpi2c3grp {
++		fsl,pins = <
++			MX91_PAD_GPIO_IO28__LPI2C3_SDA			0x40000b9e
++			MX91_PAD_GPIO_IO29__LPI2C3_SCL			0x40000b9e
++		>;
++	};
++
++	pinctrl_pcal6524: pcal6524grp {
++		fsl,pins = <
++			MX91_PAD_CCM_CLKO2__GPIO3_IO27			0x31e
++		>;
++	};
++
++	pinctrl_uart1: uart1grp {
++		fsl,pins = <
++			MX91_PAD_UART1_RXD__LPUART1_RX			0x31e
++			MX91_PAD_UART1_TXD__LPUART1_TX			0x31e
++		>;
++	};
++
++	pinctrl_uart2: uart2grp {
++		fsl,pins = <
++                	MX91_PAD_UART2_RXD__LPUART2_RX             0x0000051E
++	                MX91_PAD_UART2_TXD__LPUART2_TX             0x0000051E
++            	>;
++	};
++
++	pinctrl_uart6: uart6grp {
++		fsl,pins = <
++                	MX91_PAD_GPIO_IO04__LPUART6_TX             0x0000051E
++	                MX91_PAD_GPIO_IO05__LPUART6_RX             0x0000051E
++            	>;
++	};
++
++	pinctrl_uart8: uart8grp {
++		fsl,pins = <
++			MX91_PAD_GPIO_IO12__LPUART8_TX             0x0000051E
++			MX91_PAD_GPIO_IO13__LPUART8_RX             0x0000051E
++			MX91_PAD_GPIO_IO14__LPUART8_CTS_B          0x0000051E
++			MX91_PAD_GPIO_IO15__LPUART8_RTS_B          0x0000051E
++            >;
++	};
++
++
++	pinctrl_uart5: uart5grp {
++		fsl,pins = <
++			MX91_PAD_DAP_TDO_TRACESWO__LPUART5_TX	0x31e
++			MX91_PAD_DAP_TDI__LPUART5_RX		0x31e
++			MX91_PAD_DAP_TMS_SWDIO__LPUART5_RTS_B	0x31e
++			MX91_PAD_DAP_TCLK_SWCLK__LPUART5_CTS_B	0x31e
++		>;
++	};
++
++	pinctrl_usdhc1: usdhc1grp {
++		fsl,pins = <
++			MX91_PAD_SD1_CLK__USDHC1_CLK		0x1582
++			MX91_PAD_SD1_CMD__USDHC1_CMD		0x1382
++			MX91_PAD_SD1_DATA0__USDHC1_DATA0	0x1382
++			MX91_PAD_SD1_DATA1__USDHC1_DATA1	0x1382
++			MX91_PAD_SD1_DATA2__USDHC1_DATA2	0x1382
++			MX91_PAD_SD1_DATA3__USDHC1_DATA3	0x1382
++			MX91_PAD_SD1_DATA4__USDHC1_DATA4	0x1382
++			MX91_PAD_SD1_DATA5__USDHC1_DATA5	0x1382
++			MX91_PAD_SD1_DATA6__USDHC1_DATA6	0x1382
++			MX91_PAD_SD1_DATA7__USDHC1_DATA7	0x1382
++			MX91_PAD_SD1_STROBE__USDHC1_STROBE	0x1582
++		>;
++	};
++
++	pinctrl_usdhc1_100mhz: usdhc1-100mhzgrp {
++		fsl,pins = <
++			MX91_PAD_SD1_CLK__USDHC1_CLK		0x158e
++			MX91_PAD_SD1_CMD__USDHC1_CMD		0x138e
++			MX91_PAD_SD1_DATA0__USDHC1_DATA0	0x138e
++			MX91_PAD_SD1_DATA1__USDHC1_DATA1	0x138e
++			MX91_PAD_SD1_DATA2__USDHC1_DATA2	0x138e
++			MX91_PAD_SD1_DATA3__USDHC1_DATA3	0x138e
++			MX91_PAD_SD1_DATA4__USDHC1_DATA4	0x138e
++			MX91_PAD_SD1_DATA5__USDHC1_DATA5	0x138e
++			MX91_PAD_SD1_DATA6__USDHC1_DATA6	0x138e
++			MX91_PAD_SD1_DATA7__USDHC1_DATA7	0x138e
++			MX91_PAD_SD1_STROBE__USDHC1_STROBE	0x158e
++		>;
++	};
++
++	pinctrl_usdhc1_200mhz: usdhc1-200mhzgrp {
++		fsl,pins = <
++			MX91_PAD_SD1_CLK__USDHC1_CLK		0x15fe
++			MX91_PAD_SD1_CMD__USDHC1_CMD		0x13fe
++			MX91_PAD_SD1_DATA0__USDHC1_DATA0	0x13fe
++			MX91_PAD_SD1_DATA1__USDHC1_DATA1	0x13fe
++			MX91_PAD_SD1_DATA2__USDHC1_DATA2	0x13fe
++			MX91_PAD_SD1_DATA3__USDHC1_DATA3	0x13fe
++			MX91_PAD_SD1_DATA4__USDHC1_DATA4	0x13fe
++			MX91_PAD_SD1_DATA5__USDHC1_DATA5	0x13fe
++			MX91_PAD_SD1_DATA6__USDHC1_DATA6	0x13fe
++			MX91_PAD_SD1_DATA7__USDHC1_DATA7	0x13fe
++			MX91_PAD_SD1_STROBE__USDHC1_STROBE	0x15fe
++		>;
++	};
++
++	pinctrl_reg_usdhc2_vmmc: regusdhc2vmmcgrp {
++		fsl,pins = <
++			MX91_PAD_SD2_RESET_B__GPIO3_IO7	0x31e
++		>;
++	};
++
++	pinctrl_usdhc2_gpio: usdhc2gpiogrp {
++		fsl,pins = <
++			MX91_PAD_SD2_CD_B__GPIO3_IO0		0x31e
++		>;
++	};
++
++	pinctrl_usdhc2_gpio_sleep: usdhc2gpiogrpsleep {
++		fsl,pins = <
++			MX91_PAD_SD2_CD_B__GPIO3_IO0		0x51e
++		>;
++	};
++
++	pinctrl_usdhc2: usdhc2grp {
++		fsl,pins = <
++			MX91_PAD_SD2_CLK__USDHC2_CLK		0x1582
++			MX91_PAD_SD2_CMD__USDHC2_CMD		0x1382
++			MX91_PAD_SD2_DATA0__USDHC2_DATA0	0x1382
++			MX91_PAD_SD2_DATA1__USDHC2_DATA1	0x1382
++			MX91_PAD_SD2_DATA2__USDHC2_DATA2	0x1382
++			MX91_PAD_SD2_DATA3__USDHC2_DATA3	0x1382
++			MX91_PAD_SD2_VSELECT__USDHC2_VSELECT	0x51e
++		>;
++	};
++
++	pinctrl_usdhc2_100mhz: usdhc2-100mhzgrp {
++		fsl,pins = <
++			MX91_PAD_SD2_CLK__USDHC2_CLK		0x158e
++			MX91_PAD_SD2_CMD__USDHC2_CMD		0x138e
++			MX91_PAD_SD2_DATA0__USDHC2_DATA0	0x138e
++			MX91_PAD_SD2_DATA1__USDHC2_DATA1	0x138e
++			MX91_PAD_SD2_DATA2__USDHC2_DATA2	0x138e
++			MX91_PAD_SD2_DATA3__USDHC2_DATA3	0x138e
++			MX91_PAD_SD2_VSELECT__USDHC2_VSELECT	0x51e
++		>;
++	};
++
++	pinctrl_usdhc2_200mhz: usdhc2-200mhzgrp {
++		fsl,pins = <
++			MX91_PAD_SD2_CLK__USDHC2_CLK		0x15fe
++			MX91_PAD_SD2_CMD__USDHC2_CMD		0x13fe
++			MX91_PAD_SD2_DATA0__USDHC2_DATA0	0x13fe
++			MX91_PAD_SD2_DATA1__USDHC2_DATA1	0x13fe
++			MX91_PAD_SD2_DATA2__USDHC2_DATA2	0x13fe
++			MX91_PAD_SD2_DATA3__USDHC2_DATA3	0x13fe
++			MX91_PAD_SD2_VSELECT__USDHC2_VSELECT	0x51e
++		>;
++	};
++
++	pinctrl_usdhc2_sleep: usdhc2grpsleep {
++		fsl,pins = <
++			MX91_PAD_SD2_CLK__GPIO3_IO1            0x51e
++			MX91_PAD_SD2_CMD__GPIO3_IO2		0x51e
++			MX91_PAD_SD2_DATA0__GPIO3_IO3		0x51e
++			MX91_PAD_SD2_DATA1__GPIO3_IO4		0x51e
++			MX91_PAD_SD2_DATA2__GPIO3_IO5		0x51e
++			MX91_PAD_SD2_DATA3__GPIO3_IO6		0x51e
++			MX91_PAD_SD2_VSELECT__GPIO3_IO19	0x51e
++		>;
++	};
++
++	pinctrl_usdhc3: usdhc3grp {
++		fsl,pins = <
++			MX91_PAD_SD3_CLK__USDHC3_CLK		0x1582
++			MX91_PAD_SD3_CMD__USDHC3_CMD		0x1382
++			MX91_PAD_SD3_DATA0__USDHC3_DATA0	0x1382
++			MX91_PAD_SD3_DATA1__USDHC3_DATA1	0x1382
++			MX91_PAD_SD3_DATA2__USDHC3_DATA2	0x1382
++			MX91_PAD_SD3_DATA3__USDHC3_DATA3	0x1382
++		>;
++	};
++
++	pinctrl_usdhc3_100mhz: usdhc3-100mhzgrp {
++		fsl,pins = <
++			MX91_PAD_SD3_CLK__USDHC3_CLK		0x158e
++			MX91_PAD_SD3_CMD__USDHC3_CMD		0x138e
++			MX91_PAD_SD3_DATA0__USDHC3_DATA0	0x138e
++			MX91_PAD_SD3_DATA1__USDHC3_DATA1	0x138e
++			MX91_PAD_SD3_DATA2__USDHC3_DATA2	0x138e
++			MX91_PAD_SD3_DATA3__USDHC3_DATA3	0x138e
++		>;
++	};
++
++	pinctrl_usdhc3_200mhz: usdhc3-200mhzgrp {
++		fsl,pins = <
++			MX91_PAD_SD3_CLK__USDHC3_CLK		0x15fe
++			MX91_PAD_SD3_CMD__USDHC3_CMD		0x13fe
++			MX91_PAD_SD3_DATA0__USDHC3_DATA0	0x13fe
++			MX91_PAD_SD3_DATA1__USDHC3_DATA1	0x13fe
++			MX91_PAD_SD3_DATA2__USDHC3_DATA2	0x13fe
++			MX91_PAD_SD3_DATA3__USDHC3_DATA3	0x13fe
++		>;
++	};
++
++	pinctrl_usdhc3_sleep: usdhc3grpsleep {
++		fsl,pins = <
++			MX91_PAD_SD3_CLK__GPIO3_IO20		0x31e
++			MX91_PAD_SD3_CMD__GPIO3_IO21		0x31e
++			MX91_PAD_SD3_DATA0__GPIO3_IO22		0x31e
++			MX91_PAD_SD3_DATA1__GPIO3_IO23		0x31e
++			MX91_PAD_SD3_DATA2__GPIO3_IO24		0x31e
++			MX91_PAD_SD3_DATA3__GPIO3_IO25		0x31e
++		>;
++	};
++
++	pinctrl_usdhc3_wlan: usdhc3wlangrp {
++		fsl,pins = <
++			MX91_PAD_CCM_CLKO1__GPIO3_IO26		0x31e
++		>;
++	};
++
++	pinctrl_sai1: sai1grp {
++		fsl,pins = <
++			MX91_PAD_SAI1_TXC__SAI1_TX_BCLK			0x31e
++			MX91_PAD_SAI1_TXFS__SAI1_TX_SYNC		0x31e
++			MX91_PAD_SAI1_TXD0__SAI1_TX_DATA0		0x31e
++			MX91_PAD_SAI1_RXD0__SAI1_RX_DATA0		0x31e
++		>;
++	};
++
++	pinctrl_sai1_sleep: sai1grpsleep {
++		fsl,pins = <
++			MX91_PAD_SAI1_TXC__GPIO1_IO12                   0x51e
++			MX91_PAD_SAI1_TXFS__GPIO1_IO11			0x51e
++			MX91_PAD_SAI1_TXD0__GPIO1_IO13			0x51e
++			MX91_PAD_SAI1_RXD0__GPIO1_IO14			0x51e
++		>;
++	};
++
++	pinctrl_sai3: sai3grp {
++		fsl,pins = <
++			MX91_PAD_GPIO_IO26__SAI3_TX_SYNC		0x31e
++			MX91_PAD_GPIO_IO16__SAI3_TX_BCLK		0x31e
++			MX91_PAD_GPIO_IO17__SAI3_MCLK			0x31e
++			MX91_PAD_GPIO_IO19__SAI3_TX_DATA0		0x31e
++			MX91_PAD_GPIO_IO20__SAI3_RX_DATA0		0x31e
++		>;
++	};
++
++	pinctrl_sai3_sleep: sai3grpsleep {
++		fsl,pins = <
++			MX91_PAD_GPIO_IO26__GPIO2_IO26			0x51e
++			MX91_PAD_GPIO_IO16__GPIO2_IO16			0x51e
++			MX91_PAD_GPIO_IO17__GPIO2_IO17			0x51e
++			MX91_PAD_GPIO_IO19__GPIO2_IO19			0x51e
++			MX91_PAD_GPIO_IO20__GPIO2_IO20			0x51e
++		>;
++	};
++
++	pinctrl_pdm: pdmgrp {
++		fsl,pins = <
++			MX91_PAD_PDM_CLK__PDM_CLK			0x31e
++			MX91_PAD_PDM_BIT_STREAM0__PDM_BIT_STREAM0	0x31e
++			MX91_PAD_PDM_BIT_STREAM1__PDM_BIT_STREAM1	0x31e
++		>;
++	};
++
++	pinctrl_pdm_sleep: pdmgrpsleep {
++		fsl,pins = <
++			MX91_PAD_PDM_CLK__GPIO1_IO8			0x31e
++			MX91_PAD_PDM_BIT_STREAM0__GPIO1_IO9		0x31e
++			MX91_PAD_PDM_BIT_STREAM1__GPIO1_IO10		0x31e
++		>;
++	};
++
++	pinctrl_spdif: spdifgrp {
++		fsl,pins = <
++			MX91_PAD_GPIO_IO22__SPDIF_IN		0x3fe
++			MX91_PAD_GPIO_IO23__SPDIF_OUT		0x3fe
++		>;
++	};
++
++	pinctrl_spdif_sleep: spdifgrpsleep {
++		fsl,pins = <
++			MX91_PAD_GPIO_IO22__GPIO2_IO22		0x31e
++			MX91_PAD_GPIO_IO23__GPIO2_IO23		0x31e
++		>;
++	};
++
++	pinctrl_pca9535: pinctrl_pca9535 {
++		fsl,pins = <
++                	MX91_PAD_GPIO_IO18__GPIO2_IO18             0x0000051E
++	        >;
++	};	
++
++};
+diff --git a/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi b/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
+index 622ad2cef7f9..1507dfe012bf 100644
+--- a/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
++++ b/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
+@@ -60,6 +60,11 @@ &codec {
+ 	clocks = <&clk IMX93_CLK_SAI3_GATE>;
+ };
+ 
++&gpio_ext_som {
++        interrupt-parent = <&gpio2>;
++		interrupts = <18 IRQ_TYPE_LEVEL_LOW>;
++};
++
+ &iomuxc {
+ 	pinctrl_eqos: eqosgrp {
+ 		fsl,pins = <
+diff --git a/arch/arm64/boot/dts/freescale/imx9x-voipac-som.dtsi b/arch/arm64/boot/dts/freescale/imx9x-voipac-som.dtsi
+index bd7eb0a2f73c..a31ca927ab43 100644
+--- a/arch/arm64/boot/dts/freescale/imx9x-voipac-som.dtsi
++++ b/arch/arm64/boot/dts/freescale/imx9x-voipac-som.dtsi
+@@ -62,8 +62,6 @@ gpio_ext_som: gpio_ext_som@27 {
+ 		gpio-controller;
+ 		#gpio-cells = <2>;
+ 		reg = <0x27>;
+-            	interrupt-parent = <&gpio2>;
+-		interrupts = <18 IRQ_TYPE_LEVEL_LOW>;
+ 		interrupt-controller;
+ 		#interrupt-cells = <2>;
+ 	};
+-- 
+2.34.1
+

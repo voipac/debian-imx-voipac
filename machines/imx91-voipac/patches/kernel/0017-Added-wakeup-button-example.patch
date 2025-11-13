@@ -1,0 +1,30 @@
+From 02a366a3a8672520e204be4d3d6732802a91afe3 Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Wed, 10 Jul 2024 21:29:27 +0200
+Subject: [PATCH] Added wakeup button example
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts b/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
+index 946c06e0e308..b591de5b3196 100644
+--- a/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
++++ b/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
+@@ -67,7 +67,11 @@ gpio-buttons {
+                button-up { 
+                        label = "Up"; 
+                        linux,code = <KEY_UP>; 
+-                       gpios = <&gpio3 26 GPIO_ACTIVE_LOW>; 
++                       gpios = <&gpio3 26 GPIO_ACTIVE_LOW>;
++			wakeup-source;
++			debounce-interval = <20>;
++                  	interrupt-parent = <&gpio3>;
++	                interrupts = <26 IRQ_TYPE_LEVEL_LOW>;
+                }; 
+  
+                button-down { 
+-- 
+2.34.1
+

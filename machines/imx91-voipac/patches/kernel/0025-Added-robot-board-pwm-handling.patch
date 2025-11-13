@@ -1,0 +1,53 @@
+From e852ae8bdc256b6e33007deb25eb222b0674777b Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Thu, 5 Dec 2024 14:53:16 +0100
+Subject: [PATCH] Added robot board pwm handling
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ .../boot/dts/freescale/imx93-voipac-evk.dts   | 25 ++++++++++++++++++-
+ 1 file changed, 24 insertions(+), 1 deletion(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts b/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
+index 4bbf2e161b8f..7a29a291f019 100644
+--- a/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
++++ b/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
+@@ -110,7 +110,14 @@ button-enter {
+                };
+        };
+ 
+-
++	robot_backlight: robot_backlight {
++                compatible = "pwm-backlight";
++                pwms = <&tpm3 3 5000000 0>;
++                brightness-levels = <0 100>;
++                num-interpolated-steps = <100>;
++                default-brightness-level = <80>;
++                status = "okay";
++        };
+ };
+ 
+ &sai1 {
+@@ -416,3 +423,19 @@ MX93_PAD_CCM_CLKO4__GPIO4_IO29		0x31e
+ 	Notes:
+ 		Enable configs: CONFIG_RTC_DRV_PCF8563
+ */
++
++&tpm3 {
++	status = "okay";
++	pinctrl-names = "default";
++	pinctrl-0 = <&robot_pwm>;
++
++};
++
++&iomuxc {
++
++	robot_pwm: robot_pwm {
++		fsl,pins = <
++			MX93_PAD_GPIO_IO24__TPM3_CH3               0x0000051E
++		>;
++	};
++};
+-- 
+2.34.1
+

@@ -53,6 +53,8 @@ function make_uboot()
         cp build/${PLAT}/release/bl31.bin "../../${IMX_MKIMAGE_PATH}/iMX8M"
     elif [ ${PLAT} = "imx93" ]; then
         cp build/${PLAT}/release/bl31.bin "../../${IMX_MKIMAGE_PATH}/iMX93"
+    elif [ ${PLAT} = "imx91" ]; then
+        cp build/${PLAT}/release/bl31.bin "../../${IMX_MKIMAGE_PATH}/iMX91"
     fi
     cp build/${PLAT}/release/bl31.bin "../../${UBOOT_PATH}"
     cd -
@@ -62,7 +64,7 @@ function make_uboot()
     get_remote_file ${FIRMWARE_IMX} ${FIRMWARE_PATH}/${FIRMWARE_BINARY}
 
     cd ${FIRMWARE_PATH}
-    chmod +x ${FIRMWARE_BINARY} 
+    chmod +x ${FIRMWARE_BINARY}
     if [ ! -d $(basename ${FIRMWARE_BINARY} .bin) ]; then
        ./${FIRMWARE_BINARY}
     fi
@@ -73,24 +75,31 @@ function make_uboot()
 	cp $(basename ${FIRMWARE_BINARY} .bin)/firmware/ddr/synopsys/lpddr4*.bin "../../${IMX_MKIMAGE_PATH}/iMX8M"
     elif [ ${PLAT} = "imx93" ]; then
         cp $(basename ${FIRMWARE_BINARY} .bin)/firmware/ddr/synopsys/lpddr4*.bin "../../${IMX_MKIMAGE_PATH}/iMX93"
+    elif [ ${PLAT} = "imx91" ]; then
+        cp $(basename ${FIRMWARE_BINARY} .bin)/firmware/ddr/synopsys/lpddr4*.bin "../../${IMX_MKIMAGE_PATH}/iMX91"
+
     fi
     cd -
 
     # firmware sentinel
-    if [ ${PLAT} = "imx93" ]; then
+    if [ ${PLAT} = "imx93" ] || [ ${PLAT} = "imx91" ]; then
         mkdir -p ${FIRMWARE_SENTINEL_PATH}
-	BINARY=$(basename "${FIRMWARE_SENTINEL}")
+       	BINARY=$(basename "${FIRMWARE_SENTINEL}")
         get_remote_file ${FIRMWARE_SENTINEL} ${FIRMWARE_SENTINEL_PATH}/${BINARY}
-	cd ${FIRMWARE_SENTINEL_PATH}
-	chmod +x ${BINARY} && ./${BINARY} --auto-accept --force
-	echo "Done"
-	cp $(basename ${BINARY} .bin)/mx93a1-ahab-container.img "../../${IMX_MKIMAGE_PATH}/iMX93"
-	cd -
+	    cd ${FIRMWARE_SENTINEL_PATH}
+    	chmod +x ${BINARY} && ./${BINARY} --auto-accept --force
+	    echo "Done"
+        if [ ${PLAT} = "imx93" ]; then
+	        cp $(basename ${BINARY} .bin)/mx93a1-ahab-container.img "../../${IMX_MKIMAGE_PATH}/iMX93"
+        elif [ ${PLAT} = "imx91" ]; then
+        	cp $(basename ${BINARY} .bin)/mx91a0-ahab-container.img "../../${IMX_MKIMAGE_PATH}/iMX91"
+        fi
+	    cd -
     fi
 
     # cd to sources
     cd ${UBOOT_PATH}
-   
+
     # make u-boot image
     # clean work directory
 	make ARCH=arm -C ${2} mrproper
@@ -129,6 +138,9 @@ function make_uboot()
     elif [ ${PLAT} = "imx93" ]; then
 	cp spl/u-boot-spl.bin "../../${IMX_MKIMAGE_PATH}/iMX93"
         cp u-boot.bin "../../${IMX_MKIMAGE_PATH}/iMX93"
+    elif [ ${PLAT} = "imx91" ]; then
+	cp spl/u-boot-spl.bin "../../${IMX_MKIMAGE_PATH}/iMX91"
+        cp u-boot.bin "../../${IMX_MKIMAGE_PATH}/iMX91"
 
     fi
     cd -
@@ -142,6 +154,8 @@ function make_uboot()
         make SOC=iMX8MQ flash_evk
     elif [ ${PLAT} = "imx93" ]; then
         make SOC=iMX9 REV=A1 flash_singleboot
+    elif [ ${PLAT} = "imx91" ]; then
+        make SOC=iMX91 flash_singleboot
     fi
     cd -
 
@@ -156,6 +170,10 @@ function copy_bootloader()
         cp ${IMX_MKIMAGE_PATH}/iMX8M/flash.bin ${dts}
     elif [ ${PLAT} = "imx93" ]; then
         cp ${IMX_MKIMAGE_PATH}/iMX93/flash.bin ${dts}
+    elif [ ${PLAT} = "imx91" ]; then
+        pwd
+
+        cp ${IMX_MKIMAGE_PATH}/iMX91/flash.bin ${dts}
     fi
 }
 

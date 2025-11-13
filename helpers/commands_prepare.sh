@@ -8,6 +8,6 @@ function cmd_make_prepare()
 {
     source helpers/uboot.sh
     source helpers/kernel.sh
-    source helpers/imx93/build_nxp_wlan_modules.sh
+    source helpers/imx9x/build_nxp_wlan_modules.sh
     source helpers/sdimg.sh
 }

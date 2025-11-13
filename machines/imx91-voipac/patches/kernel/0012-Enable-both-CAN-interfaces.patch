@@ -1,0 +1,73 @@
+From 3d0b29fa27f24b18e2cde48170bf19b30cca522a Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Mon, 10 Jun 2024 21:56:36 +0200
+Subject: [PATCH] Enable both CAN interfaces
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ .../boot/dts/freescale/imx93-voipac-evk.dts   |  6 -----
+ .../boot/dts/freescale/imx93-voipac-som.dtsi  | 27 +++++++++++++++++++
+ 2 files changed, 27 insertions(+), 6 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts b/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
+index 38f3dc1b5a8f..80a66d8af5ab 100644
+--- a/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
++++ b/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
+@@ -171,12 +171,6 @@ &dphy {
+ 	status = "okay";
+ };
+ 
+-&flexcan2 {
+-	pinctrl-names = "default", "sleep";
+-	pinctrl-0 = <&pinctrl_flexcan2>;
+-	pinctrl-1 = <&pinctrl_flexcan2_sleep>;
+-	status = "okay";
+-};
+ 
+ &mu1 {
+ 	status = "okay";
+diff --git a/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi b/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
+index 9b5d17ea10bb..23be421754ac 100644
+--- a/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
++++ b/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
+@@ -335,6 +335,19 @@ MX93_PAD_ENET2_TX_CTL__GPIO4_IO20               0x51e
+ 		>;
+ 	};
+ 
++	pinctrl_flexcan1: flexcan1grp {
++		fsl,pins = <
++			MX93_PAD_PDM_BIT_STREAM0__CAN1_RX          0x139e
++		        MX93_PAD_PDM_CLK__CAN1_TX                  0x1939e
++		>;
++	};
++	pinctrl_flexcan1_sleep: flexcan1sleepgrp {
++		fsl,pins = <
++			MX93_PAD_PDM_BIT_STREAM0__GPIO1_IO09         0x31e
++		        MX93_PAD_PDM_CLK__GPIO1_IO08                 0x31e
++		>;
++	};
++
+ 	pinctrl_flexcan2: flexcan2grp {
+ 		fsl,pins = <
+ 			MX93_PAD_GPIO_IO25__CAN2_TX	0x139e
+@@ -677,3 +690,17 @@ ethphy2: ethernet-phy@2 {
+ 	};
+ };
+ 
++&flexcan1 {
++	pinctrl-names = "default", "sleep";
++	pinctrl-0 = <&pinctrl_flexcan1>;
++	pinctrl-1 = <&pinctrl_flexcan1_sleep>;
++	status = "okay";
++};
++
++&flexcan2 {
++	pinctrl-names = "default", "sleep";
++	pinctrl-0 = <&pinctrl_flexcan2>;
++	pinctrl-1 = <&pinctrl_flexcan2_sleep>;
++	status = "okay";
++};
++
+-- 
+2.34.1
+

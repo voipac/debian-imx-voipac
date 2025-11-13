@@ -1,0 +1,26 @@
+From 52ca9fd2ce670065a70c39e3da642adb2e4c5c5b Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Thu, 18 Jul 2024 09:12:40 +0200
+Subject: [PATCH] ov5640: Not fail when frequency is 0
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ drivers/media/i2c/ov5640.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/media/i2c/ov5640.c b/drivers/media/i2c/ov5640.c
+index fe849465ee49..1fdc829e4258 100644
+--- a/drivers/media/i2c/ov5640.c
++++ b/drivers/media/i2c/ov5640.c
+@@ -3908,7 +3908,7 @@ static int ov5640_probe(struct i2c_client *client)
+ 	    sensor->xclk_freq > OV5640_XCLK_MAX) {
+ 		dev_err(dev, "xclk frequency out of range: %d Hz\n",
+ 			sensor->xclk_freq);
+-		return -EINVAL;
++		//return -EINVAL;
+ 	}
+ 
+ 	/* request optional power down pin */
+-- 
+2.34.1
+

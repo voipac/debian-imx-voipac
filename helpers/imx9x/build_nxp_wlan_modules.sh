@@ -8,7 +8,7 @@ set -e
 
 source helpers/sources.sh
 source "machines/${MACHINE}/${MACHINE}.sh"
-    
+
 MODULE_PATH="sources/mwifiex"
 NXP_FIRMWARE_PATH="sources/imx-firmware"
 
@@ -24,10 +24,12 @@ function cmd_make_mwifiex()
 
 function make_mwifiex()
 {
-    
+
     cd ${MODULE_PATH}"/mxm_wifiex/wlan_src"
 
     make ARCH=arm64 -j$(nproc) CROSS_COMPILE=aarch64-linux-gnu- KERNELDIR="$1"
     mkdir -p "$(pwd)/result"
     make ARCH=arm64 -j$(nproc) CROSS_COMPILE=aarch64-linux-gnu- KERNELDIR="$1" INSTALLDIR="$(pwd)/result" install
+
+    cd -
 }

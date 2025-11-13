@@ -1,0 +1,25 @@
+From 19ded2ee9f0a38b3a4d3ae0ea92ac8cf9b3cff8b Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Tue, 20 Aug 2024 14:29:38 +0200
+Subject: [PATCH] 6.6.23 fixes
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ sound/soc/fsl/fsl-asoc-card.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/sound/soc/fsl/fsl-asoc-card.c b/sound/soc/fsl/fsl-asoc-card.c
+index 90df833f71c4..46ab6b5ee93a 100644
+--- a/sound/soc/fsl/fsl-asoc-card.c
++++ b/sound/soc/fsl/fsl-asoc-card.c
+@@ -55,7 +55,6 @@ enum fsl_asoc_card_type {
+ 	CARD_WM8524,
+ 	CARD_SI476X,
+ 	CARD_WM8958,
+-	CARD_WM8904,
+ };
+ 
+ /**
+-- 
+2.34.1
+

@@ -1,0 +1,81 @@
+From 5e6637275fa2f8afb5e338c8cc452f86defb16e7 Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Mon, 3 Jun 2024 21:32:12 +0200
+Subject: [PATCH] SBC: Drop override for i2c1
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ .../boot/dts/freescale/imx93-voipac-evk.dts   | 50 -------------------
+ 1 file changed, 50 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts b/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
+index e1c36e4038bb..27fa14b9db2e 100644
+--- a/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
++++ b/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
+@@ -124,20 +124,6 @@ &dphy {
+ 	status = "okay";
+ };
+ 
+-&dsi {
+-	status = "okay";
+-
+-	ports {
+-		port@1 {
+-			reg = <1>;
+-
+-			dsi_to_adv7535: endpoint {
+-				remote-endpoint = <&adv7535_to_dsi>;
+-			};
+-		};
+-	};
+-};
+-
+ &flexcan2 {
+ 	pinctrl-names = "default", "sleep";
+ 	pinctrl-0 = <&pinctrl_flexcan2>;
+@@ -163,42 +149,6 @@ &lpm {
+ 	status = "okay";
+ };
+ 
+-/*
+- * When add, delete or change any target device setting in &lpi2c1,
+- * please synchronize the changes to the &i3c1 bus in imx93-11x11-evk-i3c.dts.
+- */
+-&lpi2c1 {
+-	#address-cells = <1>;
+-	#size-cells = <0>;
+-	clock-frequency = <400000>;
+-	pinctrl-names = "default", "sleep";
+-	pinctrl-0 = <&pinctrl_lpi2c1>;
+-	pinctrl-1 = <&pinctrl_lpi2c1>;
+-	status = "okay";
+-
+-	
+-
+-	adv7535: hdmi@3d {
+-		compatible = "adi,adv7535";
+-		reg = <0x3d>;
+-		adi,addr-cec = <0x3b>;
+-		adi,dsi-lanes = <4>;
+-		status = "okay";
+-
+-		port {
+-			adv7535_to_dsi: endpoint {
+-				remote-endpoint = <&dsi_to_adv7535>;
+-			};
+-		};
+-	};
+-
+-	lsm6dsm@6a {
+-		compatible = "st,lsm6dso";
+-		reg = <0x6a>;
+-	};
+-};
+-
+-
+ &lpi2c3 {
+ 	#address-cells = <1>;
+ 	#size-cells = <0>;
+-- 
+2.34.1
+

@@ -15,7 +15,7 @@ function usage()
     echo "Make Debian image and create a bootabled SD card"
     echo
     echo "Usage:"
-    echo " MACHINE=imx8mq-voipac|imx93-voipac ./${SCRIPT_NAME} options"
+    echo " MACHINE=imx8mq-voipac|imx93-voipac|imx91-voipac ./${SCRIPT_NAME} options"
     echo
     echo "Options:"
     echo "  -h|--help   -- print this help"
@@ -35,12 +35,12 @@ function usage()
 ## parse input arguments ##
 readonly SHORTOPTS="c:o:d:h"
 readonly LONGOPTS="cmd:,output:,dev:,help,debug"
-  
+
 ARGS=$(getopt -s bash --options ${SHORTOPTS}  \
   --longoptions ${LONGOPTS} --name "${SCRIPT_NAME}" -- "$@" )
-        
+
 eval set -- "$ARGS"
-        
+
 while true; do
         case $1 in
                 -c|--cmd ) # script command
@@ -84,13 +84,19 @@ case $PARAM_CMD in
         kernel )
                 cmd_make_kernel
 		;;
-	mwifiex )
-		cmd_make_mwifiex
+	    mwifiex )
+		        cmd_make_mwifiex
                 ;;
+
+        sdimg )
+		        cmd_make_sdimg
+                ;;
+
         all )
                 cmd_make_uboot  &&
                 cmd_make_kernel &&
-                cmd_make_rootfs
+                cmd_make_rootfs &&
+                cmd_make_mwifiex &&
                 cmd_make_sdimg
                 ;;
         clean )

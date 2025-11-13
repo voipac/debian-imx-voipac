@@ -1,0 +1,148 @@
+From b3c3d26f90c68cbfde2576b656c2baf031e68a67 Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Mon, 3 Jun 2024 21:31:32 +0200
+Subject: [PATCH] som: Added support for user led + move ethernet nodes to SOM
+ dts
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ .../boot/dts/freescale/imx93-voipac-evk.dts   | 42 --------------
+ .../boot/dts/freescale/imx93-voipac-som.dtsi  | 56 ++++++++++++++++++-
+ 2 files changed, 53 insertions(+), 45 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts b/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
+index ac9606b902d9..e1c36e4038bb 100644
+--- a/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
++++ b/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
+@@ -153,48 +153,6 @@ &mu2 {
+ 	status = "okay";
+ };
+ 
+-&eqos {
+-	pinctrl-names = "default", "sleep";
+-	pinctrl-0 = <&pinctrl_eqos>;
+-	pinctrl-1 = <&pinctrl_eqos_sleep>;
+-	phy-mode = "rgmii-id";
+-	phy-handle = <&ethphy1>;
+-	status = "okay";
+-
+-	mdio {
+-		compatible = "snps,dwmac-mdio";
+-		#address-cells = <1>;
+-		#size-cells = <0>;
+-		clock-frequency = <5000000>;
+-
+-		ethphy1: ethernet-phy@1 {
+-			reg = <1>;
+-			eee-broken-1000t;
+-		};
+-	};
+-};
+-
+-&fec {
+-	pinctrl-names = "default", "sleep";
+-	pinctrl-0 = <&pinctrl_fec>;
+-	pinctrl-1 = <&pinctrl_fec_sleep>;
+-	phy-mode = "rgmii-id";
+-	phy-handle = <&ethphy2>;
+-	fsl,magic-packet;
+-	status = "okay";
+-
+-	mdio {
+-		#address-cells = <1>;
+-		#size-cells = <0>;
+-		clock-frequency = <5000000>;
+-
+-		ethphy2: ethernet-phy@2 {
+-			reg = <2>;
+-			eee-broken-1000t;
+-		};
+-	};
+-};
+-
+ &lcdif {
+ 	status = "okay";
+ 	assigned-clock-rates = <445333333>, <148444444>, <400000000>, <133333333>;
+diff --git a/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi b/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
+index b2f19c29005c..0235b80818c6 100644
+--- a/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
++++ b/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
+@@ -79,6 +79,17 @@ ethosu {
+ 		memory-region = <&ethosu_mem>;
+ 		power-domains = <&mlmix>;
+ 	};
++
++	gpio-leds {
++		compatible = "gpio-leds";
++
++		user-led {
++			label = "user";
++			gpios = <&gpio_ext_som 8 GPIO_ACTIVE_HIGH>;
++			default-state = "keep";
++		};
++	};
++
+ };
+ 
+ &lpi2c1 {
+@@ -108,11 +119,8 @@ codec: audio-codec@1a {
+ 		compatible = "wlf,wm8904";
+ 		reg = <0x1a>;
+ 	};
+-
+ };
+ 
+-
+-
+ &lpi2c2 {
+ 	#address-cells = <1>;
+ 	#size-cells = <0>;
+@@ -625,3 +633,45 @@ MX93_PAD_GPIO_IO18__GPIO2_IO18             0x0000051E
+ 	};	
+ };
+ 
++&eqos {
++	pinctrl-names = "default", "sleep";
++	pinctrl-0 = <&pinctrl_eqos>;
++	pinctrl-1 = <&pinctrl_eqos_sleep>;
++	phy-mode = "rgmii-id";
++	phy-handle = <&ethphy1>;
++	status = "okay";
++
++	mdio {
++		compatible = "snps,dwmac-mdio";
++		#address-cells = <1>;
++		#size-cells = <0>;
++		clock-frequency = <5000000>;
++
++		ethphy1: ethernet-phy@1 {
++			reg = <1>;
++			eee-broken-1000t;
++		};
++	};
++};
++
++&fec {
++	pinctrl-names = "default", "sleep";
++	pinctrl-0 = <&pinctrl_fec>;
++	pinctrl-1 = <&pinctrl_fec_sleep>;
++	phy-mode = "rgmii-id";
++	phy-handle = <&ethphy2>;
++	fsl,magic-packet;
++	status = "okay";
++
++	mdio {
++		#address-cells = <1>;
++		#size-cells = <0>;
++		clock-frequency = <5000000>;
++
++		ethphy2: ethernet-phy@2 {
++			reg = <2>;
++			eee-broken-1000t;
++		};
++	};
++};
++
+-- 
+2.34.1
+

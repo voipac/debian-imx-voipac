@@ -1,0 +1,153 @@
+From c86d07bd3ac45844ffb906d95c19bac16deadb37 Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Mon, 10 Jun 2024 21:56:25 +0200
+Subject: [PATCH] Added display devicetree
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ arch/arm64/boot/dts/freescale/Makefile        |   3 +-
+ .../imx93-voipac-evk-boe-wxga-lvds-panel.dts  | 118 ++++++++++++++++++
+ 2 files changed, 120 insertions(+), 1 deletion(-)
+ create mode 100644 arch/arm64/boot/dts/freescale/imx93-voipac-evk-boe-wxga-lvds-panel.dts
+
+diff --git a/arch/arm64/boot/dts/freescale/Makefile b/arch/arm64/boot/dts/freescale/Makefile
+index df10e4ea4ff7..d0534e9934c3 100644
+--- a/arch/arm64/boot/dts/freescale/Makefile
++++ b/arch/arm64/boot/dts/freescale/Makefile
+@@ -377,7 +377,8 @@ dtb-$(CONFIG_ARCH_MXC) += imx93-11x11-evk.dtb \
+ 			  imx93-11x11-evk-ld.dtb \
+ 			  imx93-11x11-evk-iw612-otbr.dtb \
+ 			  imx93-11x11-evk-rpmsg.dtb imx93-11x11-evk-rpmsg-lpv.dtb \
+-			  imx93-voipac-evk.dtb
++			  imx93-voipac-evk.dtb \
++			  imx93-voipac-evk-boe-wxga-lvds-panel.dtb
+ 
+ dtb-$(CONFIG_ARCH_MXC) += imx91-11x11-evk.dtb \
+ 			  imx91-11x11-evk-flexspi-m2.dtb imx91-11x11-evk-flexspi-nand-m2.dtb \
+diff --git a/arch/arm64/boot/dts/freescale/imx93-voipac-evk-boe-wxga-lvds-panel.dts b/arch/arm64/boot/dts/freescale/imx93-voipac-evk-boe-wxga-lvds-panel.dts
+new file mode 100644
+index 000000000000..a5f2c5c7503f
+--- /dev/null
++++ b/arch/arm64/boot/dts/freescale/imx93-voipac-evk-boe-wxga-lvds-panel.dts
+@@ -0,0 +1,118 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++/*
++ * Copyright 2022 NXP
++ */
++
++#include "imx93-voipac-evk.dts"
++
++/ {
++        backlight_reg: regulator-backlight {
++                compatible = "regulator-fixed";
++                regulator-name = "backlight";
++                regulator-min-microvolt = <1800000>;
++                regulator-max-microvolt = <1800000>;
++                gpio = <&gpio_xten0 0 GPIO_ACTIVE_HIGH>;
++                enable-active-high;
++	};
++
++	lvds_backlight: blvds_backlight {
++                compatible = "pwm-backlight";
++                pwms = <&tpm4 0 5000000 0>;
++                brightness-levels = <0 100>;
++                num-interpolated-steps = <100>;
++                default-brightness-level = <80>;
++                power-supply = <&backlight_reg>;
++                status = "okay";
++        };
++
++	lvds_panel {
++		compatible = "boe,ev121wxm-n10-1850";
++		backlight = <&lvds_backlight>;
++
++		port {
++			panel_lvds_in: endpoint {
++				remote-endpoint = <&lvds_out>;
++			};
++		};
++	};
++};
++
++&dphy {
++	status = "disabled";
++};
++
++&dsi {
++	status = "disabled";
++};
++
++&lcdif {
++	assigned-clock-rates = <498000000>, <71142857>, <400000000>, <133333333>;
++};
++
++&ldb {
++	status = "okay";
++
++	lvds-channel@0 {
++		status = "okay";
++
++		port@1 {
++			reg = <1>;
++
++			lvds_out: endpoint {
++				remote-endpoint = <&panel_lvds_in>;
++			};
++		};
++	};
++};
++
++&ldb_phy {
++	status = "okay";
++};
++
++&lpi2c2 {
++	exc80h60: touch@2a {
++		compatible = "eeti,exc80h60";
++		reg = <0x2a>;
++		interrupt-parent = <&gpio_ext_som>;
++		interrupts = <7 IRQ_TYPE_LEVEL_LOW>;
++		status = "okay";
++	};
++};
++
++&tpm4 {
++	status = "okay";
++	pinctrl-names = "default";
++	pinctrl-0 = <&lcd_pwm>;
++};
++
++&gpio_xten0 {
++	backlight_on {
++		gpio-hog;
++		gpios = <0 GPIO_ACTIVE_HIGH>;
++		output-high;
++		line-name = "backlight-on";
++	};
++};
++
++&gpio_xten1 {
++	backlight_boost {
++		gpio-hog;
++		gpios = <9 GPIO_ACTIVE_HIGH>;
++		output-high;
++		line-name = "backlight-boost";
++	};
++};
++
++&iomuxc {
++	pinctrl_ctp_int: ctp_int_grp {
++		fsl,pins = <
++			MX93_PAD_GPIO_IO21__GPIO2_IO21          0x31e
++		>;
++	};
++
++	lcd_pwm: lcd_pwm {
++		fsl,pins = <
++			MX93_PAD_GPIO_IO21__TPM4_CH1               0x0000051E
++		>;
++	};
++};
+-- 
+2.34.1
+

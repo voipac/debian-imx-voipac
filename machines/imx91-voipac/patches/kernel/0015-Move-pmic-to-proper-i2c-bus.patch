@@ -1,0 +1,51 @@
+From 271221d4829b07794f3b5b6d8625c96c63daa378 Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Thu, 4 Jul 2024 14:36:40 +0200
+Subject: [PATCH] Move pmic to proper i2c bus
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ .../boot/dts/freescale/imx93-voipac-som.dtsi  | 19 +++++++++----------
+ 1 file changed, 9 insertions(+), 10 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi b/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
+index b1f7ca6b5d5d..8a3eb511d851 100644
+--- a/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
++++ b/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
+@@ -128,16 +128,6 @@ at24@50 {
+ 		reg = <0x50>;
+ 		wp-gpios = <&gpio_ext_som 6 GPIO_ACTIVE_HIGH>;
+ 	};
+-};
+-
+-&lpi2c2 {
+-	#address-cells = <1>;
+-	#size-cells = <0>;
+-	clock-frequency = <400000>;
+-	pinctrl-names = "default", "sleep";
+-	pinctrl-0 = <&pinctrl_lpi2c2>;
+-	pinctrl-1 = <&pinctrl_lpi2c2>;
+-	status = "okay";
+ 
+ 	pmic@25 {
+ 		compatible = "nxp,pca9451a";
+@@ -213,7 +203,16 @@ ldo5: LDO5 {
+ 			};
+ 		};
+ 	};
++};
+ 
++&lpi2c2 {
++	#address-cells = <1>;
++	#size-cells = <0>;
++	clock-frequency = <400000>;
++	pinctrl-names = "default", "sleep";
++	pinctrl-0 = <&pinctrl_lpi2c2>;
++	pinctrl-1 = <&pinctrl_lpi2c2>;
++	status = "okay";
+ };
+ 
+ // emmc
+-- 
+2.34.1
+

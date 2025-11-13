@@ -18,10 +18,11 @@ function get_git_src()
 	        # clone src code
         	git clone ${1} -b ${2} --single-branch ${3}
 	fi
-	
+
 	cd ${3}
 	git config --global --add safe.directory ${3}
 	git fetch -p
+    git fetch -t
 	git checkout $2
         git reset --hard ${4}
         cd -

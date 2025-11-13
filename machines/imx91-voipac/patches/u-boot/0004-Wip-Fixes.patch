@@ -1,0 +1,304 @@
+From 48a51187854e18d47fdedbab5d1165c63cae73d6 Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Mon, 13 Jan 2025 14:57:09 +0100
+Subject: [PATCH] Wip: Fixes
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ arch/arm/dts/imx91-voipac-evk-u-boot.dtsi |  8 +-
+ arch/arm/dts/imx91-voipac-evk.dts         | 96 ++++++-----------------
+ board/voipac/imx91_voipac_evk/imx91_evk.c | 51 ++++++------
+ 3 files changed, 51 insertions(+), 104 deletions(-)
+
+diff --git a/arch/arm/dts/imx91-voipac-evk-u-boot.dtsi b/arch/arm/dts/imx91-voipac-evk-u-boot.dtsi
+index 6eea4eee73b..234659f86a7 100644
+--- a/arch/arm/dts/imx91-voipac-evk-u-boot.dtsi
++++ b/arch/arm/dts/imx91-voipac-evk-u-boot.dtsi
+@@ -141,11 +141,11 @@
+ 	bootph-pre-ram;
+ };
+ 
+-&{/soc@0/bus@44000000/i2c@44350000/pmic@25} {
++&{/soc@0/bus@44000000/i2c@44340000/pmic@25} {
+ 	bootph-pre-ram;
+ };
+ 
+-&{/soc@0/bus@44000000/i2c@44350000/pmic@25/regulators} {
++&{/soc@0/bus@44000000/i2c@44340000/pmic@25/regulators} {
+ 	bootph-pre-ram;
+ };
+ 
+@@ -163,13 +163,13 @@
+ 
+ &fec {
+ 	compatible = "fsl,imx91-fec", "fsl,imx93-fec", "fsl,imx8mq-fec";
+-	phy-reset-gpios = <&pcal6524 16 GPIO_ACTIVE_LOW>;
++	phy-reset-gpios = <&gpioexp 10 GPIO_ACTIVE_LOW>;
+ 	phy-reset-duration = <15>;
+ 	phy-reset-post-delay = <100>;
+ };
+ 
+ &ethphy1 {
+-	reset-gpios = <&pcal6524 15 GPIO_ACTIVE_LOW>;
++	reset-gpios = <&gpioexp 12 GPIO_ACTIVE_LOW>;
+ 	reset-assert-us = <15000>;
+ 	reset-deassert-us = <100000>;
+ };
+diff --git a/arch/arm/dts/imx91-voipac-evk.dts b/arch/arm/dts/imx91-voipac-evk.dts
+index de8fa9e78d8..3cef1ab44e0 100644
+--- a/arch/arm/dts/imx91-voipac-evk.dts
++++ b/arch/arm/dts/imx91-voipac-evk.dts
+@@ -1,6 +1,6 @@
+ // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+ /*
+- * Copyright 2024 NXP
++ * Copyright 2025 Voipac
+  */
+ 
+ /dts-v1/;
+@@ -9,11 +9,10 @@
+ #include "imx91.dtsi"
+ 
+ / {
+-	model = "NXP i.MX91 11X11 EVK board";
++	model = "Voipac i.MX91 EVK board";
+ 	compatible = "fsl,imx91-11x11-evk", "fsl,imx91";
+ 
+ 	aliases {
+-		rtc0 = &pcf2131;
+ 	 };
+ 
+ 	chosen {
+@@ -33,16 +32,7 @@
+ 			linux,cma-default;
+ 		};
+ 	};
+-
+-	reg_can2_stby: regulator-can2-stby {
+-		compatible = "regulator-fixed";
+-		regulator-name = "can2-stby";
+-		regulator-min-microvolt = <3300000>;
+-		regulator-max-microvolt = <3300000>;
+-		gpio = <&adp5585gpio 5 GPIO_ACTIVE_LOW>;
+-		enable-active-low;
+-	};
+-
++	
+ 	reg_vref_1v8: regulator-adc-vref {
+ 		compatible = "regulator-fixed";
+ 		regulator-name = "vref_1v8";
+@@ -62,24 +52,6 @@
+ 		enable-active-high;
+ 	};
+ 
+-	reg_vdd_12v: regulator-vdd-12v {
+-		compatible = "regulator-fixed";
+-		regulator-name = "reg_vdd_12v";
+-		regulator-min-microvolt = <12000000>;
+-		regulator-max-microvolt = <12000000>;
+-		gpio = <&pcal6524 14 GPIO_ACTIVE_HIGH>;
+-		enable-active-high;
+-	};
+-
+-	reg_vrpi_3v3: regulator-vrpi-3v3 {
+-		compatible = "regulator-fixed";
+-		regulator-name = "VRPI_3V3";
+-		gpio = <&pcal6524 2 GPIO_ACTIVE_HIGH>;
+-		regulator-min-microvolt = <3300000>;
+-		regulator-max-microvolt = <3300000>;
+-		enable-active-high;
+-		vin-supply = <&buck4>;
+-	};
+ };
+ 
+ &adc1 {
+@@ -139,22 +111,24 @@
+ 	pinctrl-0 = <&pinctrl_lpi2c1>;
+ 	pinctrl-1 = <&pinctrl_lpi2c1>;
+ 	status = "okay";
+-};
+ 
+-&lpi2c2 {
+-	#address-cells = <1>;
+-	#size-cells = <0>;
+-	clock-frequency = <400000>;
+-	pinctrl-names = "default", "sleep";
+-	pinctrl-0 = <&pinctrl_lpi2c2>;
+-	pinctrl-1 = <&pinctrl_lpi2c2>;
+-	status = "okay";
++	gpioexp: gpioexp@27 {
++		compatible = "nxp,pca9535";
++		reg = <0x27>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_pca9535>;
++		gpio-controller;
++		#gpio-cells = <2>;
++		interrupt-parent = <&gpio2>;
++		interrupts = <18 IRQ_TYPE_LEVEL_LOW>;
++	};
++
+ 
+ 	pmic@25 {
+ 		compatible = "nxp,pca9451a";
+ 		reg = <0x25>;
+-		interrupt-parent = <&pcal6524>;
+-		interrupts = <11 IRQ_TYPE_EDGE_FALLING>;
++		interrupt-parent = <&gpioexp>;
++		interrupts = <4 IRQ_TYPE_EDGE_FALLING>;
+ 
+ 		regulators {
+ 			buck1: BUCK1 {
+@@ -225,25 +199,6 @@
+ 		};
+ 	};
+ 
+-	pcal6524: gpio@22 {
+-		compatible = "nxp,pcal6524";
+-		pinctrl-names = "default";
+-		pinctrl-0 = <&pinctrl_pcal6524>;
+-		reg = <0x22>;
+-		gpio-controller;
+-		#gpio-cells = <2>;
+-		interrupt-controller;
+-		#interrupt-cells = <2>;
+-		interrupt-parent = <&gpio3>;
+-		interrupts = <27 IRQ_TYPE_LEVEL_LOW>;
+-	};
+-
+-	adp5585gpio: gpio@34 {
+-		compatible = "adp5585";
+-		reg = <0x34>;
+-		gpio-controller;
+-		#gpio-cells = <2>;
+-	};
+ };
+ 
+ &lpi2c3 {
+@@ -255,14 +210,6 @@
+ 	pinctrl-1 = <&pinctrl_lpi2c3>;
+ 	status = "okay";
+ 
+-	pcf2131: rtc@53 {
+-		compatible = "nxp,pcf2131";
+-		reg = <0x53>;
+-		interrupt-parent = <&pcal6524>;
+-		interrupts = <1 IRQ_TYPE_LEVEL_LOW>;
+-		status = "okay";
+-	};
+-
+ 	ptn5110: tcpc@50 {
+ 		compatible = "nxp,ptn5110";
+ 		reg = <0x50>;
+@@ -524,19 +471,20 @@
+ 		>;
+ 	};
+ 
+-	pinctrl_pcal6524: pcal6524grp {
++	pinctrl_uart1: uart1grp {
+ 		fsl,pins = <
+-			MX91_PAD_CCM_CLKO2__GPIO3_IO27			0x31e
++			MX91_PAD_UART1_RXD__LPUART1_RX			0x31e
++			MX91_PAD_UART1_TXD__LPUART1_TX			0x31e
+ 		>;
+ 	};
+ 
+-	pinctrl_uart1: uart1grp {
++	pinctrl_pca9535: pca9535grp {
+ 		fsl,pins = <
+-			MX91_PAD_UART1_RXD__LPUART1_RX			0x31e
+-			MX91_PAD_UART1_TXD__LPUART1_TX			0x31e
++			MX91_PAD_GPIO_IO18__GPIO2_IO18                  0x51e
+ 		>;
+ 	};
+ 
++
+ 	/* need to config the SION for data and cmd pad, refer to ERR052021 */
+ 	pinctrl_usdhc1: usdhc1grp {
+ 		fsl,pins = <
+diff --git a/board/voipac/imx91_voipac_evk/imx91_evk.c b/board/voipac/imx91_voipac_evk/imx91_evk.c
+index 42b24bb7867..818c53720a9 100644
+--- a/board/voipac/imx91_voipac_evk/imx91_evk.c
++++ b/board/voipac/imx91_voipac_evk/imx91_evk.c
+@@ -32,13 +32,6 @@ static iomux_v3_cfg_t const uart_pads[] = {
+ 	MX91_PAD_UART1_TXD__LPUART1_TX | MUX_PAD_CTRL(UART_PAD_CTRL),
+ };
+ 
+-static iomux_v3_cfg_t const lcdif_gpio_pads[] = {
+-	MX91_PAD_GPIO_IO00__GPIO2_IO0| MUX_PAD_CTRL(LCDIF_GPIO_PAD_CTRL),
+-	MX91_PAD_GPIO_IO01__GPIO2_IO1 | MUX_PAD_CTRL(LCDIF_GPIO_PAD_CTRL),
+-	MX91_PAD_GPIO_IO02__GPIO2_IO2 | MUX_PAD_CTRL(LCDIF_GPIO_PAD_CTRL),
+-	MX91_PAD_GPIO_IO03__GPIO2_IO3 | MUX_PAD_CTRL(LCDIF_GPIO_PAD_CTRL),
+-};
+-
+ #if CONFIG_IS_ENABLED(EFI_HAVE_CAPSULE_SUPPORT)
+ #define IMX_BOOT_IMAGE_GUID \
+ 	EFI_GUID(0xbc550d86, 0xda26, 0x4b70, 0xac, 0x05, \
+@@ -63,15 +56,6 @@ struct efi_capsule_update_info update_info = {
+ int board_early_init_f(void)
+ {
+ 	imx_iomux_v3_setup_multiple_pads(uart_pads, ARRAY_SIZE(uart_pads));
+-	imx_iomux_v3_setup_multiple_pads(lcdif_gpio_pads, ARRAY_SIZE(lcdif_gpio_pads));
+-
+-	/* Workaround LCD panel leakage, output low of CLK/DE/VSYNC/HSYNC as early as possible */
+-	struct gpio_regs *gpio2 = (struct gpio_regs *)(GPIO2_BASE_ADDR + 0x40);
+-	setbits_le32(&gpio2->gpio_pcor, 0xf);
+-	setbits_le32(&gpio2->gpio_pddr, 0xf);
+-	/* Set GPIO2_26 to output high to disable panel backlight at default */
+-	setbits_le32(&gpio2->gpio_psor, BIT(26));
+-	setbits_le32(&gpio2->gpio_pddr, BIT(26));
+ 
+ 	init_uart_clk(LPUART1_CLK_ROOT);
+ 
+@@ -327,6 +311,29 @@ static void board_gpio_init(void)
+ 	dm_gpio_set_value(&exp_sel_desc, 1);
+ }
+ 
++int board_phys_sdram_size(phys_size_t *size)
++{
++#ifdef CONFIG_DRAM_SIZE_2G
++	*size = SZ_2G;
++	return 0;
++#endif /* CONFIG_DRAM_SIZE_2G */
++
++#ifdef CONFIG_DRAM_SIZE_1G
++	*size = SZ_1G;
++	return 0;
++#endif /* CONFIG_DRAM_SIZE_1G */
++
++#ifdef CONFIG_DRAM_SIZE_512M
++	*size = SZ_512M;
++	return 0;
++#endif /* CONFIG_DRAM_SIZE_512M */
++
++	printf("Unknown DRAM size, using 512M as default\n");
++	*size = SZ_512M;
++
++       return 0;
++ }
++
+ int board_init(void)
+ {
+ #ifdef CONFIG_USB_TCPC
+@@ -350,17 +357,9 @@ int board_late_init(void)
+ #endif
+ 
+ #ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
+-	env_set("board_name", "11X11_EVK");
+-	env_set("board_rev", "iMX93");
++	env_set("board_name", "VOIPAC_EVK");
++	env_set("board_rev", "iMX91");
+ #endif
+ 	return 0;
+ }
+ 
+-void board_quiesce_devices(void)
+-{
+-	/* Turn off 5V for backlight */
+-	dm_gpio_set_value(&ext_pwren_desc, 0);
+-
+-	/* Turn off MUX for rpi */
+-	dm_gpio_set_value(&exp_sel_desc, 0);
+-}
+-- 
+2.34.1
+

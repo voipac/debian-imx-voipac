@@ -1,0 +1,59 @@
+From 08bc1c6f6121add087f11dcb21b2503ef2e34867 Mon Sep 17 00:00:00 2001
+From: Marek Belisko <marek.belisko@open-nandra.com>
+Date: Wed, 3 Jul 2024 12:26:52 +0200
+Subject: [PATCH] Added support for Bluetooth port
+
+Signed-off-by: Marek Belisko <marek.belisko@open-nandra.com>
+---
+ arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts  |  6 +++++-
+ arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi | 10 +++++++++-
+ 2 files changed, 14 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts b/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
+index a41c76245a7a..946c06e0e308 100644
+--- a/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
++++ b/arch/arm64/boot/dts/freescale/imx93-voipac-evk.dts
+@@ -273,7 +273,11 @@ &lpuart6 {
+ 	status = "okay";
+ };
+ 
+-
++&lpuart8 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_uart8>;
++	status = "okay";
++};
+ 
+ &media_blk_ctrl {
+ 	status = "okay";
+diff --git a/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi b/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
+index 3f2202337e99..b1f7ca6b5d5d 100644
+--- a/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
++++ b/arch/arm64/boot/dts/freescale/imx93-voipac-som.dtsi
+@@ -398,7 +398,6 @@ MX93_PAD_UART2_TXD__LPUART2_TX             0x0000051E
+             	>;
+ 	};
+ 
+-
+ 	pinctrl_uart6: uart6grp {
+ 		fsl,pins = <
+                 	MX93_PAD_GPIO_IO04__LPUART6_TX             0x0000051E
+@@ -406,6 +405,15 @@ MX93_PAD_GPIO_IO05__LPUART6_RX             0x0000051E
+             	>;
+ 	};
+ 
++	pinctrl_uart8: uart8grp {
++		fsl,pins = <
++			MX93_PAD_GPIO_IO12__LPUART8_TX             0x0000051E
++			MX93_PAD_GPIO_IO13__LPUART8_RX             0x0000051E
++			MX93_PAD_GPIO_IO14__LPUART8_CTS_B          0x0000051E
++			MX93_PAD_GPIO_IO15__LPUART8_RTS_B          0x0000051E
++            >;
++	};
++
+ 	/* need to config the SION for data and cmd pad, refer to ERR052021 */
+ 	pinctrl_usdhc1: usdhc1grp {
+ 		fsl,pins = <
+-- 
+2.34.1
+
